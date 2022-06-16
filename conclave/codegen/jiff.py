@@ -82,6 +82,7 @@ class JiffCodeGen(CodeGen):
 
     def _generate_job(self, job_name: str, op_code: str):
 
+        print("in jiff, _generate_job")
         template = open(
             "{0}/mpc_top_level.tmpl".format(self.template_directory), 'r').read()
 

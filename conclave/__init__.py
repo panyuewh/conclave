@@ -44,7 +44,7 @@ def generate_code(protocol: callable, cfg: CodeGenConfig, mpc_frameworks: list,
 
         # for each sub-dag run code gen and add resulting job to job queue
         for job_num, (framework, sub_dag, stored_with) in enumerate(mapping):
-            print(job_num, framework)
+            print("job", job_num, ":", framework)
             if framework == "sharemind":
                 name = "{}-sharemind-job-{}".format(cfg.name, job_num)
                 job = SharemindCodeGen(cfg, sub_dag, cfg.pid).generate(name, cfg.output_path)
@@ -57,10 +57,12 @@ def generate_code(protocol: callable, cfg: CodeGenConfig, mpc_frameworks: list,
                 name = "{}-python-job-{}".format(cfg.name, job_num)
                 job = PythonCodeGen(cfg, sub_dag).generate(name, cfg.output_path)
                 job_queue.append(job)
+                print("in python job = ", job)
             elif framework == "obliv-c":
                 name = "{}-oblivc-job-{}".format(cfg.name, job_num)
                 job = OblivcCodeGen(cfg, sub_dag, cfg.pid).generate(name, cfg.output_path)
                 job_queue.append(job)
+                print("in obliv-c job = ", job)
             elif framework == "jiff":
                 name = "{}-jiff-job-{}".format(cfg.name, job_num)
                 job = JiffCodeGen(cfg, sub_dag, cfg.pid).generate(name, cfg.output_path)
@@ -109,6 +111,7 @@ def dispatch_jobs(job_queue: list, conclave_config: CodeGenConfig, time_dispatch
     if len(conclave_config.all_pids) > 1:
         networked_peer = _setup_networked_peer(conclave_config.network_config)
 
+    print("time_dispatch=", time_dispatch, ", job_queue=", job_queue)
     if time_dispatch:
         # TODO use timeit
         import time

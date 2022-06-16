@@ -1,7 +1,7 @@
 import asyncio
 import functools
 import pickle
-
+import sys
 
 class IAMMsg:
     """ Message identifying peer. """
@@ -124,6 +124,7 @@ class SalmonPeer:
             lambda: SalmonProtocol(self),
             host=self.host, port=self.port)
         self.loop = loop
+        print("SalmonPeer: pid=", self.pid, "host=", self.host, "port=", self.port)
 
     def register_dispatcher(self, dispatcher):
 
@@ -140,7 +141,7 @@ class SalmonPeer:
         self.msg_buffer = [msg for msg in self.msg_buffer if isinstance(msg, DoneMsg)]
 
     def connect_to_others(self):
-
+        print("+++++++in connect_to_others")
         @asyncio.coroutine
         def _create_connection_retry(f, other_host, other_port):
             while True:
@@ -161,7 +162,9 @@ class SalmonPeer:
             transport.write(formatted)
 
         to_wait_on = []
+        print("parties= ", self.parties)
         for other_pid in self.parties.keys():
+            print("+++connect_to_others: host=",self.parties[other_pid]["host"], " port=", self.parties[other_pid]["port"], file=sys.stderr)
             if other_pid < self.pid:
                 other_host = self.parties[other_pid]["host"]
                 other_port = self.parties[other_pid]["port"]
@@ -170,6 +173,9 @@ class SalmonPeer:
 
                 # create connection
                 # using deprecated asyncio.async for 3.4.3 support
+                # conn = asyncio.create_task(self.loop.create_connection(
+                #  lambda: SalmonProtocol(self), other_host, other_port))
+                #conn = self.loop.create_connection(
                 conn = asyncio.async(_create_connection_retry(
                     lambda: SalmonProtocol(self), other_host, other_port))
 
@@ -201,6 +207,7 @@ class SalmonPeer:
     def _send_msg(self, receiver, msg):
 
         # sends formatted message
+        print("_send_msg self.parties=", self.parties, ", peer_connections=", self.peer_connections, ", msg=", msg)
         formatted = pickle.dumps(msg) + b"\n\n\n"
         self.peer_connections[receiver].write(formatted)
 
@@ -209,6 +216,7 @@ class SalmonPeer:
         # sends message indicating task completion
         done_msg = DoneMsg(self.pid, task_name)
         self._send_msg(receiver, done_msg)
+        print("send_done_msg receiver=", receiver, ", task_name=", task_name)
 
 
 def setup_peer(config):
@@ -220,5 +228,7 @@ def setup_peer(config):
     loop = asyncio.get_event_loop()
     peer = SalmonPeer(loop, config)
     peer.server = loop.run_until_complete(peer.server)
+    print("****peer=", peer)
     peer.connect_to_others()
+    print("****after connect_to_others() peer=", peer)
     return peer

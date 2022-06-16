@@ -123,7 +123,8 @@ class CodeGenConfig:
                 {"host": "cb-spark-node-0", "port": 8002}
             ]
             net = NetworkConfig(net_conf, self.pid)
-            oc_conf = OblivcConfig("/obliv-c/bin/oblivcc", "ca-spark-node-0:9000")
+            oc_conf = OblivcConfig("/obliv-c/bin/oblivcc -D_Float128=double", "ca-spark-node-0:9000")
+            print("************in with_default_mpc_config")
             return self \
                 .with_network_config(net) \
                 .with_oc_config(oc_conf)

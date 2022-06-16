@@ -1,4 +1,5 @@
 import os
+import sys
 
 import pystache
 
@@ -29,6 +30,7 @@ class PythonCodeGen(CodeGen):
     def _generate_job(self, job_name: str, code_directory: str, op_code: str):
         """ Top level code generation function. """
         op_code = self._generate_outputs(op_code)
+        print("in python _generate_job", file=sys.stderr)
         template = open("{}/top_level.tmpl"
                         .format(self.template_directory), 'r').read()
         data = {

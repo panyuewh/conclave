@@ -7,6 +7,7 @@ from conclave.config import SparkConfig
 
 
 def setup(conf: dict):
+    print("****setup was never called *****conf= ", conf)
     # GENERAL
     pid = int(conf["user_config"]["pid"])
     workflow_name = conf["user_config"]["workflow_name"]

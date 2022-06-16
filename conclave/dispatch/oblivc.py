@@ -10,6 +10,7 @@ class OblivCDispatcher:
 
     def __init__(self, peer, config):
 
+        print("OblivDispatcher peer=", peer)
         self.peer = peer
         self.config = config
         self.loop = peer.loop
@@ -116,11 +117,12 @@ class OblivCDispatcher:
         self.peer.register_dispatcher(self)
 
         if int(self.peer.pid) == int(job.submit_party):
-            print("Dispatching as Garbler.\n")
+            print("Dispatching as obliv-c Garbler. pid=%s, job=" % self.peer.pid, job)
             self.peer.send_done_msg(job.evaluator_party, job.name + '.submit')
+            print("send_done_msg sent")
             self._dispatch(job)
         elif int(self.peer.pid) == int(job.evaluator_party):
-            print("Dispatching as Evaluator.\n")
+            print("Dispatching as obliv-c Evaluator. pid=%s, job=" % self.peer.pid, job)
             self.dispatch_as_evaluator(job)
         else:
             print("Weird PID: {}".format(self.peer.pid))

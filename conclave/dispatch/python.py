@@ -8,6 +8,7 @@ class PythonDispatcher:
 
         cmd = "{}/workflow.py".format(job.code_dir)
 
+        print("Dispatching python job=", job)
         print("{}: {}/workflow.py running"
               .format(job.name, job.code_dir))
 

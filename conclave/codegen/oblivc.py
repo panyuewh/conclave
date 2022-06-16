@@ -453,6 +453,7 @@ class OblivcCodeGen(CodeGen):
             "IP_AND_PORT": self.oc_config.ip_and_port,
             "PATH": "{0}/{1}".format(self.config.code_path, job_name)
         }
+        print("OC_COMP_PATH=", self.oc_config.oc_path)
 
         return pystache.render(template, data)
 
