@@ -40,7 +40,7 @@ class SalmonProtocol(asyncio.Protocol):
     def __init__(self, peer):
         """ Initialize SalmonProtocol object. """
 
-        self.peer = peer
+        self.peer = peer   # a SalmonPeer object
         self.buffer = b""
         self.transport = None
 
@@ -70,7 +70,7 @@ class SalmonProtocol(asyncio.Protocol):
             raise Exception(
                 "Unknown peer attempting to register: " + str(other_pid))
         conn = self.peer.peer_connections[other_pid]
-        if isinstance(conn, asyncio.Future):
+        if isinstance(conn, asyncio.Future):  
             conn.set_result((self.transport, self))
         else:
             raise Exception("Unexpected peer registration attempt")
@@ -115,9 +115,10 @@ class SalmonPeer:
 
         self.pid = config["pid"]
         self.parties = config["parties"]
+        print("SalmonPeer ", self.pid, self.parties)
         self.host = self.parties[self.pid]["host"]
         self.port = self.parties[self.pid]["port"]
-        self.peer_connections = {}
+        self.peer_connections = {}   # dict of {other_pid: (transport, protocol) or a Future}
         self.dispatcher = None
         self.msg_buffer = []
         self.server = loop.create_server(
@@ -142,16 +143,16 @@ class SalmonPeer:
 
     def connect_to_others(self):
         print("+++++++in connect_to_others")
-        @asyncio.coroutine
-        def _create_connection_retry(f, other_host, other_port):
+        async def _create_connection_retry(f, other_host, other_port):
             while True:
                 conn = None
                 try:
-                    conn = yield from self.loop.create_connection(f, other_host, other_port)
+                    conn = await self.loop.create_connection(f, other_host, other_port)
                 except OSError:
                     print("Retrying connection to {} {}".format(other_host, other_port))
-                    yield from asyncio.sleep(1)
+                    await asyncio.sleep(1)   ##TODO change "yield from" to "await"
                 else:
+                    # on success, return (transport, protocol)
                     return conn
 
         def _send_IAM(pid, conn):
@@ -161,10 +162,9 @@ class SalmonPeer:
             transport, protocol = conn.result()
             transport.write(formatted)
 
-        to_wait_on = []
+        to_wait_on = []   # list of asyncio.Future() objects
         print("parties= ", self.parties)
         for other_pid in self.parties.keys():
-            print("+++connect_to_others: host=",self.parties[other_pid]["host"], " port=", self.parties[other_pid]["port"], file=sys.stderr)
             if other_pid < self.pid:
                 other_host = self.parties[other_pid]["host"]
                 other_port = self.parties[other_pid]["port"]
@@ -172,11 +172,7 @@ class SalmonPeer:
                     other_pid, other_host, other_port))
 
                 # create connection
-                # using deprecated asyncio.async for 3.4.3 support
-                # conn = asyncio.create_task(self.loop.create_connection(
-                #  lambda: SalmonProtocol(self), other_host, other_port))
-                #conn = self.loop.create_connection(
-                conn = asyncio.async(_create_connection_retry(
+                conn = asyncio.ensure_future( _create_connection_retry(
                     lambda: SalmonProtocol(self), other_host, other_port))
 
                 self.peer_connections[other_pid] = conn
@@ -191,7 +187,7 @@ class SalmonPeer:
                 connection_made = asyncio.Future()
                 self.peer_connections[other_pid] = connection_made
                 to_wait_on.append(connection_made)
-        self.loop.run_until_complete(asyncio.gather(*to_wait_on))
+        self.loop.run_until_complete(asyncio.gather(*to_wait_on))   
         # prevent new incoming connections
         self.server.close()
         self.loop.run_until_complete(self.server.wait_closed())
@@ -227,8 +223,6 @@ def setup_peer(config):
     """
     loop = asyncio.get_event_loop()
     peer = SalmonPeer(loop, config)
-    peer.server = loop.run_until_complete(peer.server)
-    print("****peer=", peer)
+    peer.server = loop.run_until_complete(peer.server) 
     peer.connect_to_others()
-    print("****after connect_to_others() peer=", peer)
     return peer
