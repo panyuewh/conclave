@@ -115,7 +115,6 @@ class SalmonPeer:
 
         self.pid = config["pid"]
         self.parties = config["parties"]
-        print("SalmonPeer ", self.pid, self.parties)
         self.host = self.parties[self.pid]["host"]
         self.port = self.parties[self.pid]["port"]
         self.peer_connections = {}   # dict of {other_pid: (transport, protocol) or a Future}
@@ -125,7 +124,6 @@ class SalmonPeer:
             lambda: SalmonProtocol(self),
             host=self.host, port=self.port)
         self.loop = loop
-        print("SalmonPeer: pid=", self.pid, "host=", self.host, "port=", self.port)
 
     def register_dispatcher(self, dispatcher):
 
@@ -142,7 +140,6 @@ class SalmonPeer:
         self.msg_buffer = [msg for msg in self.msg_buffer if isinstance(msg, DoneMsg)]
 
     def connect_to_others(self):
-        print("+++++++in connect_to_others")
         async def _create_connection_retry(f, other_host, other_port):
             while True:
                 conn = None
@@ -163,7 +160,6 @@ class SalmonPeer:
             transport.write(formatted)
 
         to_wait_on = []   # list of asyncio.Future() objects
-        print("parties= ", self.parties)
         for other_pid in self.parties.keys():
             if other_pid < self.pid:
                 other_host = self.parties[other_pid]["host"]
@@ -203,7 +199,6 @@ class SalmonPeer:
     def _send_msg(self, receiver, msg):
 
         # sends formatted message
-        print("_send_msg self.parties=", self.parties, ", peer_connections=", self.peer_connections, ", msg=", msg)
         formatted = pickle.dumps(msg) + b"\n\n\n"
         self.peer_connections[receiver].write(formatted)
 
@@ -212,7 +207,6 @@ class SalmonPeer:
         # sends message indicating task completion
         done_msg = DoneMsg(self.pid, task_name)
         self._send_msg(receiver, done_msg)
-        print("send_done_msg receiver=", receiver, ", task_name=", task_name)
 
 
 def setup_peer(config):
