@@ -3,6 +3,9 @@ import functools
 import pickle
 import sys
 
+from conclave.config import NetworkConfig
+
+
 class IAMMsg:
     """ Message identifying peer. """
 
@@ -111,7 +114,7 @@ class SalmonPeer:
     messages to other peers and forward the received messages to the other peers.
     """
 
-    def __init__(self, loop, config):
+    def __init__(self, loop, config: NetworkConfig):
 
         self.pid = config["pid"]
         self.parties = config["parties"]
@@ -209,7 +212,7 @@ class SalmonPeer:
         self._send_msg(receiver, done_msg)
 
 
-def setup_peer(config):
+def setup_peer(config: NetworkConfig):
     """
     Creates a peer and connects peer to all other peers. Blocks until connection succeeds.
     :param config: network configuration

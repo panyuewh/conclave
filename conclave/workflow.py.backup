@@ -66,7 +66,7 @@ def setup(conf: dict):
     conclave_config.input_path = conf["user_config"]["paths"]["input_path"]
     conclave_config.code_path = conf["user_config"]["paths"]["input_path"]
     conclave_config.output_path = conf["user_config"]["paths"]["input_path"]
-
+    print("++++++++++++++  conclave.workflow.setup ++++++++++++++++++++++++++")
     return conclave_config
 
 

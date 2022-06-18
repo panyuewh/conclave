@@ -6,6 +6,7 @@ from conclave.codegen.python import PythonCodeGen
 from conclave.codegen.sharemind import SharemindCodeGen
 from conclave.codegen.spark import SparkCodeGen
 from conclave.codegen.oblivc import OblivcCodeGen
+from conclave.codegen.motion import MotionCodeGen
 from conclave.codegen.jiff import JiffCodeGen
 from conclave.codegen.single_party import SinglePartyCodegen
 from conclave.config import CodeGenConfig
@@ -63,6 +64,11 @@ def generate_code(protocol: callable, cfg: CodeGenConfig, mpc_frameworks: list,
                 job = OblivcCodeGen(cfg, sub_dag, cfg.pid).generate(name, cfg.output_path)
                 job_queue.append(job)
                 print("in obliv-c job = ", job)
+            elif framework == "motion":
+                name = "{}-motion-job-{}".format(cfg.name, job_num)
+                job = MotionCodeGen(cfg, sub_dag, cfg.pid).generate(name, cfg.output_path)
+                job_queue.append(job)
+                print("in motion job = ", job)
             elif framework == "jiff":
                 name = "{}-jiff-job-{}".format(cfg.name, job_num)
                 job = JiffCodeGen(cfg, sub_dag, cfg.pid).generate(name, cfg.output_path)
@@ -108,6 +114,8 @@ def dispatch_jobs(job_queue: list, conclave_config: CodeGenConfig, time_dispatch
     networked_peer = None
 
     # if more than one party is involved in the protocol, we need a networked peer
+
+    print("network_config: ", conclave_config.network_config)
     if len(conclave_config.all_pids) > 1:
         networked_peer = _setup_networked_peer(conclave_config.network_config)
 

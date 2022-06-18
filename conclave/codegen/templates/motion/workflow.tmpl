@@ -1,0 +1,64 @@
+// MIT License
+//
+// Copyright (c) 2019 Oleksandr Tkachenko
+// Cryptography and Privacy Engineering Group (ENCRYPTO)
+// TU Darmstadt, Germany
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+#include "workflow.h"
+
+#include "motioncore/secure_type/secure_unsigned_integer.h"
+#include "motioncore/statistics/analysis.h"
+#include "motioncore/statistics/run_time_statistics.h"
+#include "motioncore/utility/bit_vector.h"
+#include "motioncore/algorithm/algorithm_description.h"
+#include "motioncore/protocols/arithmetic_gmw/arithmetic_gmw_wire.h"
+#include "motioncore/protocols/bmr/bmr_wire.h"
+#include "motioncore/protocols/boolean_gmw/boolean_gmw_wire.h"
+#include "motioncore/protocols/share_wrapper.h"
+#include "motioncore/utility/config.h"
+
+namespace mo = encrypto::motion;
+
+std::vector<mo::SecureUnsignedInteger> CreateWorkflowCircuit(
+    std::vector<mo::SecureUnsignedInteger>& shared_input) 
+{
+  std::vector<mo::SecureUnsignedInteger> shared_output;
+  {{{WORKFLOW}}}
+  return shared_output;
+}
+
+mo::RunTimeStatistics EvaluateProtocol(mo::PartyPointer& party,
+                                       const std::vector<std::vector<uint32_t>>& input_rel,
+                                       std::vector<std::vector<uint32_t>>& output_rel)
+{
+  std::vector<mo::SecureUnsignedInteger> output;
+  std::vector<mo::SecureUnsignedInteger> shared_input;
+  std::vector<mo::SecureUnsignedInteger> shared_output;
+  for (std::size_t i=0; i < input_rel.size(); i++)
+    shared_input.push_back(party->In<mo::MpcProtocol::kArithmeticGmw>(input_rel[i], 1));
+  output = CreateWorkflowCircuit(shared_input);
+  // output_rel = output.Out();
+
+  party->Run();
+  party->Finish();
+  const auto& statistics = party->GetBackend()->GetRunTimeStatistics();
+  return statistics.front();
+}

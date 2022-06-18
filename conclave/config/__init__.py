@@ -17,9 +17,9 @@ class NetworkConfig:
     def set_network_config(self):
         """ Return network configuration dict. """
 
-        network_config = dict()
-        network_config['pid'] = self.pid
-        network_config["parties"] = {}
+        #network_config = dict()
+        #network_config['pid'] = self.pid
+        #network_config["parties"] = {}
         network_config = {'pid': self.pid, "parties": {}}
         for i in range(len(self.parties)):
             network_config["parties"][i + 1] = {}
@@ -56,12 +56,17 @@ class SparkConfig:
 
 
 class OblivcConfig:
-    """
-    Obliv-c configuration.
-    """
+    """ Obliv-c configuration. """
 
     def __init__(self, oc_path: str, ip_and_port: str):
         self.oc_path = oc_path
+        self.ip_and_port = ip_and_port
+
+
+class MotionConfig:
+    """ MOTION configuration."""
+
+    def __init__(self, ip_and_port: str):
         self.ip_and_port = ip_and_port
 
 
@@ -80,18 +85,19 @@ class JiffConfig:
 class CodeGenConfig:
     """ Config object for code generation module. """
 
-    def __init__(self, job_name: [str, None] = None, pid: int = 1):
+    def __init__(self, workflow_name: [str, None] = None, pid: int = 1):
         """ Initialize CodeGenConfig object. """
 
         self.inited = True
         self.use_floats = False
         self.delimiter = ','
-        if job_name is not None:
-            self.name = job_name
-            self.code_path = "/tmp/{}-code/".format(job_name)
+        if workflow_name is not None:
+            self.name = workflow_name
+            self.code_path = "/tmp/{}-code".format(workflow_name)
         else:
             self.code_path = tempfile.mkdtemp(suffix="-code", prefix="salmon-")
             self.name = os.path.basename(self.code_path)
+        print("code_path =", self.code_path, "workflow_name =", workflow_name)
         self.use_leaky_ops = False
         self.data_backend = "local"
         self.use_swift = False
@@ -197,6 +203,16 @@ class CodeGenConfig:
             self.__init__()
 
         self.system_configs["oblivc"] = cfg
+
+        return self
+
+    def with_mo_config(self, cfg: MotionConfig):
+        """ Add MotionConfig object to this object. """
+
+        if not self.inited:
+            self.__init__()
+
+        self.system_configs["motion"] = cfg
 
         return self
 

@@ -3,7 +3,7 @@ import sys
 
 import conclave.lang as cc
 from conclave import generate_code, dispatch_jobs
-from conclave.config import CodeGenConfig, SharemindCodeGenConfig, OblivcConfig, NetworkConfig
+from conclave.config import CodeGenConfig, SharemindCodeGenConfig, OblivcConfig, MotionConfig, NetworkConfig
 from conclave.utils import defCol
 
 
@@ -47,6 +47,17 @@ def main():
 
         oc_conf = OblivcConfig("/obliv-c/bin/oblivcc", "ca-spark-node-0:9000")
         conclave_config.with_oc_config(oc_conf)
+    elif mpc_backend == "motion":
+        conclave_config.all_pids= [1, 2]
+        net_conf = [
+            {"host": "ca-spark-node-0", "port": 8001},
+            {"host": "cb-spark-node-0", "port": 8002}
+        ]
+        net = NetworkConfig(net_conf, int(pid))
+        conclave_config.with_network_config(net)
+
+        mo_conf = MotionConfig("ca-spark-node-0:9000")
+        conclave_config.with_mo_config(mo_conf)
     else:
         raise Exception("Unknown MPC backend {}".format(mpc_backend))
 
