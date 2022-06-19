@@ -448,51 +448,56 @@ class MotionCodeGen(CodeGen):
         Generate bash script that runs Obliv-c jobs.
         """
 
-        template = open("{}/bash.tmpl"
-                        .format(self.template_directory), 'r').read()
-
-        print("Motion network_config: ", self.mo_config.parties)
-        data = {
-            # This is for command line, info is duplicate with controller params
-            # and just to provide alterative for debug purpose
-            "PID": self.pid,
-            "IP_AND_PORTS": " ".join(",".join((str(idx), ip_addr["host"], str(ip_addr["port"]))) \
-                            for idx, ip_addr in self.mo_config.parties.items()),
-            "IN_PATH": self.config.input_path,
-            "OUT_PATH": self.config.output_path,
-            ## TODO: decide whether belows are still needed
-            #"MO_COMP_PATH": self.mo_config.oc_path,
-            #"IP_AND_PORT": self.mo_config.ip_and_port,
-            #"PATH": "{0}/{1}".format(self.config.code_path, job_name)
-        }
-        ## TODO: remove
-        #print("OC_COMP_PATH=", self.oc_config.oc_path)
-
-        return pystache.render(template, data)
-
-    def _generate_header(self):  ##TODO: double check if needed to keep
-        """
-        Generate header file that stores struct data.
-        """
-
         nodes = self.dag.top_sort()
-
+        out_path = ''
         in_path = ''
-
         for node in nodes:
             if isinstance(node, Create):
                 if int(self.pid) in node.out_rel.stored_with:
                     in_path = "{0}/{1}.csv".format(self.config.input_path, node.out_rel.name)
+                    self.in_path = in_path
 
-        template = open(
-            "{0}/workflow.tmpl".format(self.template_directory), 'r').read()
+            if isinstance(node, Open):
+                if int(self.pid) in node.out_rel.stored_with:
+                    out_path = "{0}/{1}.csv".format(self.config.input_path, node.out_rel.name)
 
+        template = open("{}/bash.tmpl"
+                        .format(self.template_directory), 'r').read()
         data = {
+            # This is for command line, info is duplicate with controller params
+            # and just to provide alterative for debug purpose
+            "PID": self.pid,
+            "IP_AND_PORTS": " ".join(",".join([str(idx), ip_addr["host"], str(ip_addr["port"])]) \
+                            for idx, ip_addr in self.mo_config.parties.items()),
             "IN_PATH": in_path,
-            "TYPE": 'float' if self.config.use_floats else 'int'
+            "OUT_OPTION_AND_PATH": "--out-path {}".format(out_path) if out_path else "",
         }
 
         return pystache.render(template, data)
+
+    #def _generate_header(self):  ##TODO: double check if needed to keep
+        #"""
+        #Generate header file that stores struct data.
+        #"""
+
+        #nodes = self.dag.top_sort()
+
+        #in_path = ''
+
+        #for node in nodes:
+            #if isinstance(node, Create):
+                #if int(self.pid) in node.out_rel.stored_with:
+                    #in_path = "{0}/{1}.csv".format(self.config.input_path, node.out_rel.name)
+
+        #template = open(
+            #"{0}/workflow.tmpl".format(self.template_directory), 'r').read()
+
+        #data = {
+            #"IN_PATH": in_path,
+            #"TYPE": 'float' if self.config.use_floats else 'int'
+        #}
+
+        #return pystache.render(template, data)
 
     def _generate_workflow(self, code: str):
         """

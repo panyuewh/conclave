@@ -46,6 +46,8 @@ class SalmonProtocol(asyncio.Protocol):
         self.peer = peer   # a SalmonPeer object
         self.buffer = b""
         self.transport = None
+        print("SalmonProtocol peer=", self.peer.pid, self.peer)
+        print("SalmonProtocol peer.dispatcher=", self.peer.dispatcher)
 
     def connection_made(self, transport):
 
@@ -80,7 +82,7 @@ class SalmonProtocol(asyncio.Protocol):
 
     def _handle_done_msg(self, done_msg):
 
-        print("done msg received", done_msg)
+        print("Done msg received", done_msg)
         if self.peer.dispatcher:
             self.peer.dispatcher.receive_msg(done_msg)
         else:

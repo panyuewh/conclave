@@ -14,6 +14,6 @@ then
     fi
 else
     echo "start mpcexec..."
-    build/mpcexec --parties {{{IP_AND_PORTS}}} --my-id {{{PID}}} --in-path {{{IN_PATH}}} --out-path {{{OUT_PATH}}}
+    build/mpcexec --parties {{{IP_AND_PORTS}}} --my-id {{{PID}}} --in-path {{{IN_PATH}}} {{{OUT_OPTION_AND_PATH}}}
     echo "finish mpcexec"
 fi 

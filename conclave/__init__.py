@@ -58,17 +58,14 @@ def generate_code(protocol: callable, cfg: CodeGenConfig, mpc_frameworks: list,
                 name = "{}-python-job-{}".format(cfg.name, job_num)
                 job = PythonCodeGen(cfg, sub_dag).generate(name, cfg.output_path)
                 job_queue.append(job)
-                print("in python job = ", job)
             elif framework == "obliv-c":
                 name = "{}-oblivc-job-{}".format(cfg.name, job_num)
                 job = OblivcCodeGen(cfg, sub_dag, cfg.pid).generate(name, cfg.output_path)
                 job_queue.append(job)
-                print("in obliv-c job = ", job)
             elif framework == "motion":
                 name = "{}-motion-job-{}".format(cfg.name, job_num)
                 job = MotionCodeGen(cfg, sub_dag, cfg.pid).generate(name, cfg.output_path)
                 job_queue.append(job)
-                print("in motion job = ", job)
             elif framework == "jiff":
                 name = "{}-jiff-job-{}".format(cfg.name, job_num)
                 job = JiffCodeGen(cfg, sub_dag, cfg.pid).generate(name, cfg.output_path)

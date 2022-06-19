@@ -27,8 +27,7 @@ class MotionDispatcher(Dispatcher):
 
         cmd = "{}/bash.sh".format(job.code_dir)
 
-        print("{}: {}/bash.sh setup MOTION job. "
-              .format(job.name, job.code_dir))
+        print("{}: setup MOTION job. ".format(job.name))
 
         try:
             run(["/bin/bash", cmd, "rebuild"], cwd=job.code_dir)
@@ -42,8 +41,8 @@ class MotionDispatcher(Dispatcher):
 
         cmd = "{}/bash.sh".format(job.code_dir)
 
-        print("{}: {}/bash.sh execute MOTION job. "
-              .format(job.name, job.code_dir))
+        print("{}: execute MOTION job. "
+              .format(job.name))
 
         try:
             run(["/bin/bash", cmd], cwd=job.code_dir)
@@ -53,11 +52,12 @@ class MotionDispatcher(Dispatcher):
         for other_pid in job.input_parties:
             if other_pid not in self.early and other_pid != self.peer.pid:
                 self.to_wait_on[other_pid] = asyncio.Future()
-
+            if other_pid != self.peer.pid:
+                self.peer.send_done_msg(other_pid, job.name)
         future = self.to_wait_on.values()
         self.loop.run_until_complete(asyncio.gather(*future))
 
-        time.sleep(10)
+        time.sleep(3)
 
     def dispatch(self, job):
 
@@ -66,21 +66,22 @@ class MotionDispatcher(Dispatcher):
         # register self as current dispatcher with peer
         self.peer.register_dispatcher(self)
 
-        self.peer.dispatcher = None
+        #self.peer.dispatcher = None
         self.to_wait_on = {}
         self.early = set()
         self._setup(job)
 
         self._execute(job)
-        for other_pid in job.input_parties:
-            self.peer.send_done_msg(other_pid, job.name)
+
+        self.peer.dispatcher = None
+        self.to_wait_on = {}
+        self.early = set()
 
     def receive_msg(self, msg):
         """ Receive message from other party in computation. """
 
         done_peer = msg.pid
         if done_peer in self.to_wait_on:
-            print("Motion DoneMsg received.\n")
             self.to_wait_on[done_peer].set_result(True)
         else:
             self.early.add(done_peer)

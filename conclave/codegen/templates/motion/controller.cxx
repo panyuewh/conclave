@@ -56,7 +56,7 @@ int main(int ac, char* av[])
 
   std::vector<std::vector<uint32_t>> input_rel;
   std::vector<std::vector<uint32_t>> output_rel;
-  rapidcsv::Document input_doc(user_options["in_path"].as<std::string>());
+  rapidcsv::Document input_doc(user_options["in-path"].as<std::string>());
   for (std::size_t idx=0; idx < input_doc.GetRowCount(); idx++) {
     auto record = input_doc.GetRow<uint32_t>(idx);
     input_rel.push_back(record);
@@ -65,12 +65,18 @@ int main(int ac, char* av[])
   mo::PartyPointer party{CreateParty(user_options)};
 
   auto statistics = EvaluateProtocol(party, input_rel, output_rel);
-
-  rapidcsv::Document output_doc(user_options["out_path"].as<std::string>());
-  output_doc.Clear(); 
-  for (std::size_t idx = 0; idx < output_rel.size(); idx++)
-    output_doc.InsertRow(idx, output_rel[idx]);
-  output_doc.Save(); 
+  
+  if (user_options.count("out-path")) {
+    auto filename{user_options["out-path"].as<std::string>()};
+    std::cout << "Will write to " << filename << std::endl;
+    std::ofstream output_file(filename, std::ios::out);
+    rapidcsv::Document output_doc;
+    //output_doc.Clear(); 
+    for (std::size_t idx = 0; idx < output_rel.size(); idx++)
+      output_doc.InsertRow(idx, output_rel[idx]);
+    output_doc.Save(output_file); 
+    output_file.close();
+  }
 
   mo::AccumulatedRunTimeStatistics accumulated_statistics;
   mo::AccumulatedCommunicationStatistics accumulated_communication_statistics;
@@ -89,6 +95,7 @@ const std::regex kPartyArgumentRegex(
 bool CheckPartyArgumentSyntax(const std::string& party_argument) 
 {
   // other party's id, IP address, and port
+  std::cout << "party_arg: " << party_argument << std::endl;
   return std::regex_match(party_argument, kPartyArgumentRegex);
 }
 
@@ -188,31 +195,33 @@ mo::PartyPointer CreateParty(const po::variables_map& user_options)
   const auto parties_string{user_options["parties"].as<const std::vector<std::string>>()};
   const auto number_of_parties{parties_string.size()};
   const auto my_id{user_options["my-id"].as<std::size_t>()};
-  if (my_id >= number_of_parties) 
+  if (my_id > number_of_parties) 
   {
     throw std::runtime_error(fmt::format(
-        "My id needs to be in the range [0, #parties - 1], current my id is {} and #parties is {}",
-        my_id, number_of_parties));
+        "My id needs to be in the range [1, #parties], current my id is {} and #parties is {}",
+        my_id, number_of_parties+1));
   }
 
   mo::communication::TcpPartiesConfiguration parties_configuration(number_of_parties);
-
+  
   for (const auto& party_string : parties_string) 
   {
     const auto [party_id, host, port] = ParsePartyArgument(party_string);
-    if (party_id >= number_of_parties) 
+    if (party_id > number_of_parties) 
     {
       throw std::runtime_error(
-          fmt::format("Party's id needs to be in the range [0, #parties - 1], current id "
+          fmt::format("Party's id needs to be in the range [1, #parties], current id "
                       "is {} and #parties is {}",
-                      party_id, number_of_parties));
+                      party_id, number_of_parties+1));
     }
-    parties_configuration.at(party_id) = std::make_pair(host, port);
+    parties_configuration.at(party_id-1) = std::make_pair(host, port);
+    if (party_id != my_id) 
+      std::cout << "Will connect to " << party_id << " at " << host << ":" << port << std::endl;
   }
-  mo::communication::TcpSetupHelper helper(my_id, parties_configuration);
+  mo::communication::TcpSetupHelper helper(my_id-1, parties_configuration);
   auto communication_layer = std::make_unique<mo::communication::CommunicationLayer>
   (
-      my_id, helper.SetupConnections()
+      my_id-1, helper.SetupConnections()
   );
   auto party = std::make_unique<mo::Party>(std::move(communication_layer));
   auto configuration = party->GetConfiguration();

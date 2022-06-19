@@ -122,10 +122,11 @@ class OpNode(Node):
 
     def __str__(self):
         """ Return a string representation of this node and whether it requires MPC. """
-        return "{}{}->{}".format(
+        return "{}-{}->{}{}".format(
             super(OpNode, self).__str__(),
             "mpc" if self.is_mpc else "",
-            self.out_rel.name
+            self.out_rel.name,
+            self.out_rel.stored_with
         )
 
 
