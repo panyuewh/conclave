@@ -5,7 +5,8 @@ project(MotionTemplate)
 
 add_executable(mpcexec workflow.cxx controller.cxx)
 target_include_directories(mpcexec PUBLIC
-        "/usr/include/motioncore")
+        "/usr/include/motioncore"
+        "/usr/local/include/motioncore")
 target_link_libraries(mpcexec PUBLIC
         motion
         boost_program_options

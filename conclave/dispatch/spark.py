@@ -1,7 +1,9 @@
 from subprocess import call
 
+from conclave.dispatch import Dispatcher
 
-class SparkDispatcher:
+
+class SparkDispatcher(Dispatcher):
     """ Dispatches Spark jobs. """
 
     def __init__(self, master_url):

@@ -5,8 +5,10 @@ from subprocess import call
 
 import pystache
 
+from conclave.dispatch import Dispatcher
 
-class OblivCDispatcher:
+
+class OblivCDispatcher(Dispatcher):
 
     def __init__(self, peer, config):
 

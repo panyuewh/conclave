@@ -334,9 +334,10 @@ class PythonCodeGen(CodeGen):
         raise Exception("Blackbox ops not supported")
 
     def _write_code(self, code: str, job_name: str):
-        os.makedirs("{}/{}".format(self.config.code_path,
-                                   job_name), exist_ok=True)
+        code_dir = "{}/{}".format(self.config.code_path, job_name)
+        os.makedirs(code_dir, exist_ok=True)
+        print("python code write to", code_dir)
         # write code to a file
         pyfile = open(
-            "{}/{}/workflow.py".format(self.config.code_path, job_name), 'w')
+            "{}/workflow.py".format(code_dir, job_name), 'w')
         pyfile.write(code)

@@ -115,7 +115,7 @@ def dispatch_jobs(job_queue: list, conclave_config: CodeGenConfig, time_dispatch
 
     # if more than one party is involved in the protocol, we need a networked peer
 
-    print("network_config: ", conclave_config.network_config)
+    print("Salmon network_config: ", conclave_config.network_config)
     if len(conclave_config.all_pids) > 1:
         networked_peer = _setup_networked_peer(conclave_config.network_config)
 

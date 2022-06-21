@@ -1,7 +1,10 @@
 
 
 
-class SinglePartyDispatcher:
+from conclave.dispatch import Dispatcher
+
+
+class SinglePartyDispatcher(Dispatcher):
 
     def __init__(self, peer):
 

@@ -25,6 +25,7 @@
 #pragma once
 
 #include "base/party.h"
+#include "motioncore/statistics/run_time_statistics.h"
 
 encrypto::motion::RunTimeStatistics EvaluateProtocol(encrypto::motion::PartyPointer& party,
                                        const std::vector<std::vector<uint32_t>>& input_rel,

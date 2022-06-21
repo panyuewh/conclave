@@ -108,6 +108,8 @@ class SalmonProtocol(asyncio.Protocol):
                 print("failed to parse line:", line)
 
 
+#from conclave.dispatch import Dispatcher
+
 class SalmonPeer:
     """
     A salmon network peer exposes networking functionality. Used to transfer

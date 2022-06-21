@@ -66,8 +66,10 @@ class OblivcConfig:
 class MotionConfig:
     """ MOTION configuration."""
 
-    def __init__(self, ip_and_port: str):
-        self.ip_and_port = ip_and_port
+    def __init__(self, net_config: dict):
+        self.inited = True
+        self.pid = net_config["pid"]
+        self.parties = net_config["parties"]
 
 
 class JiffConfig:

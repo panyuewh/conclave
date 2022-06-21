@@ -1,7 +1,9 @@
 from subprocess import call
 
+from conclave.dispatch import Dispatcher
 
-class JiffDispatcher:
+
+class JiffDispatcher(Dispatcher):
 
     def __init__(self, peer, config):
 

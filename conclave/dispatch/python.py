@@ -1,7 +1,9 @@
 from subprocess import call
 
+from conclave.dispatch import Dispatcher
 
-class PythonDispatcher:
+
+class PythonDispatcher(Dispatcher):
     """ Dispatches Python jobs. """
 
     def dispatch(self, job):

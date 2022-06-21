@@ -1,12 +1,19 @@
 #!/bin/bash
 #c++ -std=c++20 example_template_main.cpp example_template.cpp -I/usr/include/motioncore -lmotion -lboost_program_options -lboost_context -lboost_fiber -lboost_log_setup -lboost_log -lboost_filesystem -lboost_system -lboost_thread -lboost_json -lpthread -lgomp -lcrypto -lfmt
 
-if [ ! -d "build" ] || [[ $1 == "rc" ]]
+if [ ! -d "build" ] || [[ $1 == "build" ]] || [[ $1 == "rebuild" ]]
 then 
-    rm -r build
-    cmake -S . -B build
+    if [[ $1 == "rebuild" ]]
+    then 
+        rm -rf build
+    fi
+    if [ ! -d "build" ]  
+    then
+        cmake -S . -B build
+        cmake --build build -j 8
+    fi
+else
+    echo "start mpcexec..."
+    build/mpcexec --parties {{{IP_AND_PORTS}}} --my-id {{{PID}}} --in-path {{{IN_PATH}}} --out-path {{{OUT_PATH}}}
+    echo "finish mpcexec"
 fi 
-cmake --build build -j 8
-echo "start mpcexec..."
-build/mpcexec --parties {{{IP_AND_PORTS}}} --my-id {{{PID}}} --in-path {{{IN_PATH}}} --out-path {{{OUT_PATH}}}
-echo "finish mpcexec"

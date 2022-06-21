@@ -1,8 +1,10 @@
 import asyncio
 from subprocess import call
 
+from conclave.dispatch import Dispatcher
 
-class SharemindDispatcher:
+
+class SharemindDispatcher(Dispatcher):
     """ Dispatches sharemind jobs. """
 
     def __init__(self, peer):

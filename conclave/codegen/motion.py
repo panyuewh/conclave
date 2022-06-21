@@ -105,7 +105,7 @@ class MotionCodeGen(CodeGen):
 
         op_code = pystache.render(template, data)
 
-        job = MotionJob(job_name, "{}/{}".format(code_directory, job_name))
+        job = MotionJob(job_name, "{}/{}".format(code_directory, job_name, [1, 2]))   ## TODO: current just assume 2 parties [1, 2], should be based on job nature
 
         return job, op_code
 
@@ -451,12 +451,13 @@ class MotionCodeGen(CodeGen):
         template = open("{}/bash.tmpl"
                         .format(self.template_directory), 'r').read()
 
+        print("Motion network_config: ", self.mo_config.parties)
         data = {
             # This is for command line, info is duplicate with controller params
             # and just to provide alterative for debug purpose
             "PID": self.pid,
             "IP_AND_PORTS": " ".join(",".join((str(idx), ip_addr["host"], str(ip_addr["port"]))) \
-                            for idx, ip_addr in self.config.network_config["parties"].items()),
+                            for idx, ip_addr in self.mo_config.parties.items()),
             "IN_PATH": self.config.input_path,
             "OUT_PATH": self.config.output_path,
             ## TODO: decide whether belows are still needed
@@ -518,45 +519,45 @@ class MotionCodeGen(CodeGen):
 
         return pystache.render(template, data)
 
-    def _generate_controller(self):
-        """
-        Populates controller file that loads data and dispatches computation.
-        """
+    #def _generate_controller(self):
+        #"""
+        #Populates controller file that loads data and dispatches computation.
+        #"""
 
-        nodes = self.dag.top_sort()
+        #nodes = self.dag.top_sort()
 
-        out_path = ''
-        in_path = ''
-        write_str = ''
+        #out_path = ''
+        #in_path = ''
+        #write_str = ''
 
-        for node in nodes:
-            if isinstance(node, Create):
-                if int(self.pid) in node.out_rel.stored_with:
-                    in_path = "{0}/{1}.csv".format(self.config.input_path, node.out_rel.name)
-                    self.in_path = in_path
+        #for node in nodes:
+            #if isinstance(node, Create):
+                #if int(self.pid) in node.out_rel.stored_with:
+                    #in_path = "{0}/{1}.csv".format(self.config.input_path, node.out_rel.name)
+                    #self.in_path = in_path
 
-            if isinstance(node, Open):
-                if int(self.pid) in node.out_rel.stored_with:
-                    out_path = "{0}/{1}.csv".format(self.config.input_path, node.out_rel.name)
-                    write_str += 'writeData(&io);'
+            #if isinstance(node, Open):
+                #if int(self.pid) in node.out_rel.stored_with:
+                    #out_path = "{0}/{1}.csv".format(self.config.input_path, node.out_rel.name)
+                    #write_str += 'writeData(&io);'
 
-        template = open(
-            "{0}/controller.tmpl".format(self.template_directory), 'r').read()
+        #template = open(
+            #"{0}/controller.tmpl".format(self.template_directory), 'r').read()
 
-        data = {
-            "PID": self.pid,
-            "IP_AND_PORTS": ",".join(",".join(('"', str(idx), ip_addr["host"], str(ip_addr["port"]), '"')) 
-                            for idx, ip_addr in self.config.network_config["parties"].items()),
-            "OUTPUT_PATH": out_path,
-            "INPUT_PATH": in_path,
-            ## TODO: check if belows are still needed
-            "WRITE_CODE": write_str,
-            "TYPE": 'g' if self.config.use_floats else 'i',
-            "TYPE_CONV_STR": 'atof' if self.config.use_floats else 'atoi',
-            "NUM_TYPE": 'float' if self.config.use_floats else 'int'
-        }
+        #data = {
+            #"PID": self.pid,
+            #"IP_AND_PORTS": ",".join('"{}"'.format(",".join((str(idx), ip_addr["host"], str(ip_addr["port"])))) 
+                            #for idx, ip_addr in self.config.network_config["parties"].items()),
+            #"OUTPUT_PATH": out_path,
+            #"INPUT_PATH": in_path,
+            ### TODO: check if belows are still needed
+            #"WRITE_CODE": write_str,
+            #"TYPE": 'g' if self.config.use_floats else 'i',
+            #"TYPE_CONV_STR": 'atof' if self.config.use_floats else 'atoi',
+            #"NUM_TYPE": 'float' if self.config.use_floats else 'int'
+        #}
 
-        return pystache.render(template, data)
+        #return pystache.render(template, data)
 
     def _write_code(self, code: str, job_name: str):
         """
@@ -571,15 +572,16 @@ class MotionCodeGen(CodeGen):
         workflow = open("{}/workflow.cxx".format(code_dir), 'w')
         workflow.write(workflow_code)
 
-        controller_code = self._generate_controller()
-        controller = open("{}/controller.cxx".format(code_dir), 'w')
-        controller.write(controller_code)
+        #controller_code = self._generate_controller()
+        #controller = open("{}/controller.cxx".format(code_dir), 'w')
+        #controller.write(controller_code)
 
         bash_code = self._write_bash(job_name)
         bash = open("{}/bash.sh".format(code_dir), 'w')
         bash.write(bash_code)
 
         try:
+            call(["/usr/bin/cp", "{}/controller.cxx".format(self.template_directory), code_dir])
             call(["/usr/bin/cp", "{}/workflow.h".format(self.template_directory), code_dir])
             call(["/usr/bin/cp", "{}/rapidcsv.h".format(self.template_directory), code_dir])
             call(["/usr/bin/cp", "{}/CMakeLists.txt".format(self.template_directory), code_dir])
