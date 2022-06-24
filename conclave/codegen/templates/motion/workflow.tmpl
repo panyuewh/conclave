@@ -37,28 +37,66 @@
 
 namespace mo = encrypto::motion;
 
-std::vector<mo::SecureUnsignedInteger> CreateWorkflowCircuit(
-    std::vector<mo::SecureUnsignedInteger>& shared_input) 
+void close_input(mo::PartyPointer& party,
+                 const std::vector<std::vector<uint32_t>>& input_rel,
+                 std::vector<mo::SecureUnsignedInteger>& shared_input,
+                 std::set<std::size_t> stored_with)
 {
+  for (auto pid: stored_with)
+    for (std::size_t i=0; i < input_rel.size(); i++)
+      shared_input.push_back(party->In<mo::MpcProtocol::kArithmeticGmw>(input_rel[i], pid));
+}
+
+void open_output(mo::PartyPointer& party,
+                 std::vector<mo::SecureUnsignedInteger>& shared_output,
+                 std::vector<std::vector<mo::SecureUnsignedInteger>>& output,                 
+                 std::set<std::size_t> stored_with)
+{
+  for (std::size_t i=0; i < shared_output.size(); i++) {
+    std::vector<mo::SecureUnsignedInteger> output_row {shared_output[i].Unsimdify()};
+    for (std::size_t j=0; j < output_row.size(); j++) 
+      output_row[j] = output_row[j].Out();
+    output.push_back(output_row);
+  }  
+}
+
+void CreateWorkflowCircuit(
+                mo::PartyPointer& party,
+                std::set<std::size_t> stored_with,
+                const std::vector<std::vector<std::uint32_t>>& input_rel,
+                std::vector<std::vector<mo::SecureUnsignedInteger>>& output)                
+{
+  std::vector<mo::SecureUnsignedInteger> shared_input1; 
+  std::vector<mo::SecureUnsignedInteger> shared_input2; 
   std::vector<mo::SecureUnsignedInteger> shared_output;
-  {{{WORKFLOW}}}
-  return shared_output;
+  close_input(party, input_rel, shared_input1, {0});  
+  close_input(party, input_rel, shared_input2, {1});
+  std::cout << "pretend executing ... " << std::endl;
+  shared_output = shared_input1;
+  open_output(party, shared_output, output, {1});
 }
 
 mo::RunTimeStatistics EvaluateProtocol(mo::PartyPointer& party,
                                        const std::vector<std::vector<uint32_t>>& input_rel,
                                        std::vector<std::vector<uint32_t>>& output_rel)
 {
-  std::vector<mo::SecureUnsignedInteger> output;
-  std::vector<mo::SecureUnsignedInteger> shared_input;
-  std::vector<mo::SecureUnsignedInteger> shared_output;
-  for (std::size_t i=0; i < input_rel.size(); i++)
-    shared_input.push_back(party->In<mo::MpcProtocol::kArithmeticGmw>(input_rel[i], 1));
-  output = CreateWorkflowCircuit(shared_input);
-  // output_rel = output.Out();
+  std::set<std::size_t> stored_with {0, 1};
+  std::vector<std::vector<mo::SecureUnsignedInteger>> output;  
+  CreateWorkflowCircuit(party, stored_with, input_rel, output);
 
   party->Run();
+  for (auto each_row: output) {
+    std::vector<std::uint32_t> row;
+    for (auto each_value: each_row) 
+      row.push_back(each_value.As<std::uint32_t>()); 
+    output_rel.push_back(row);   
+  }  
   party->Finish();
+  for (auto row: output_rel) {
+    for (auto cell: row)
+      std::cout << cell << " ";
+    std::cout << std:: endl;
+  };
   const auto& statistics = party->GetBackend()->GetRunTimeStatistics();
   return statistics.front();
 }
