@@ -30,7 +30,7 @@ class MotionDispatcher(Dispatcher):
         print("{}: setup MOTION job. ".format(job.name))
 
         try:
-            run(["/bin/bash", cmd, "rebuild"], cwd=job.code_dir)
+            run(["/bin/bash", cmd, "build"], cwd=job.code_dir)
         except Exception as e:
             print(e)
 

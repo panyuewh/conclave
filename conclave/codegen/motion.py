@@ -92,18 +92,19 @@ class MotionCodeGen(CodeGen):
         Returns generated Spark code and Job object.
         """
 
-        if self.config.use_floats:
-            template = open(
-                "{}/top_level_float.tmpl".format(self.template_directory), 'r').read()
-        else:
-            template = open(
-                "{}/top_level_int.tmpl".format(self.template_directory), 'r').read()
+        ## TODO may need to convert data types somewhere but not sure it is here
+        #if self.config.use_floats:
+            #template = open(
+                #"{}/top_level_float.tmpl".format(self.template_directory), 'r').read()
+        #else:
+            #template = open(
+                #"{}/top_level_int.tmpl".format(self.template_directory), 'r').read()
 
-        data = {
-            'OP_CODE': op_code
-        }
+        #data = {
+            #'OP_CODE': op_code
+        #}
 
-        op_code = pystache.render(template, data)
+        #op_code = pystache.render(template, data)
 
         job = MotionJob(job_name, "{}/{}".format(code_directory, job_name, [1, 2]))   ## TODO: current just assume 2 parties [1, 2], should be based on job nature
 
@@ -131,7 +132,7 @@ class MotionCodeGen(CodeGen):
 
         data = {
             "RELNAME": close_op.out_rel.name,
-            "STORED_WITH": stored_with_set.pop()
+            "STORED_WITH": stored_with_set.pop()-1
          }
 
         return pystache.render(template, data)
@@ -273,7 +274,7 @@ class MotionCodeGen(CodeGen):
 
         data = {
             "IN_REL": open_op.get_in_rel().name,
-            "PARTY": 0
+            "PARTY": 1
         }
 
         return pystache.render(template, data)
@@ -466,8 +467,8 @@ class MotionCodeGen(CodeGen):
         data = {
             # This is for command line, info is duplicate with controller params
             # and just to provide alterative for debug purpose
-            "PID": self.pid,
-            "IP_AND_PORTS": " ".join(",".join([str(idx), ip_addr["host"], str(ip_addr["port"])]) \
+            "PID": self.pid-1,
+            "IP_AND_PORTS": " ".join(",".join([str(idx-1), ip_addr["host"], str(ip_addr["port"])]) \
                             for idx, ip_addr in self.mo_config.parties.items()),
             "IN_PATH": in_path,
             "OUT_OPTION_AND_PATH": "--out-path {}".format(out_path) if out_path else "",
@@ -572,7 +573,7 @@ class MotionCodeGen(CodeGen):
         os.makedirs(code_dir, exist_ok=True)
         print("mpc code write to", code_dir)
 
-        code = 'std::cout << ' + '"pretend executing ... "' + ' << std::endl;'   ## TODO: remove the testing code
+        #code = 'std::cout << ' + '"pretend executing ... "' + ' << std::endl;'   ## TODO: remove the testing code
         workflow_code = self._generate_workflow(code)
         workflow = open("{}/workflow.cxx".format(code_dir), 'w')
         workflow.write(workflow_code)

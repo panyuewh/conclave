@@ -10,8 +10,8 @@ then
     if [ ! -d "build" ]  
     then
         cmake -S . -B build
-        cmake --build build -j 8
     fi
+    cmake --build build -j 8
 else
     echo "start mpcexec..."
     build/mpcexec --parties {{{IP_AND_PORTS}}} --my-id {{{PID}}} --in-path {{{IN_PATH}}} {{{OUT_OPTION_AND_PATH}}}

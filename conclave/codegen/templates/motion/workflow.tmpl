@@ -53,11 +53,48 @@ void open_output(mo::PartyPointer& party,
                  std::set<std::size_t> stored_with)
 {
   for (std::size_t i=0; i < shared_output.size(); i++) {
-    std::vector<mo::SecureUnsignedInteger> output_row {shared_output[i].Unsimdify()};
-    for (std::size_t j=0; j < output_row.size(); j++) 
-      output_row[j] = output_row[j].Out();
-    output.push_back(output_row);
+    std::vector<mo::SecureUnsignedInteger> output_col {shared_output[i].Unsimdify()};
+    for (std::size_t j=0; j < output_col.size(); j++) 
+      output_col[j] = output_col[j].Out();
+    output.push_back(output_col);
   }  
+}
+
+void concat(std::vector<mo::SecureUnsignedInteger>& left_shared_input,
+            std::vector<mo::SecureUnsignedInteger>& right_shared_input,
+            std::vector<mo::SecureUnsignedInteger>& shared_output)
+{
+  //assert(left_shared_input.size() == right_shared_input.isze());
+
+  for (std::size_t i=0; i < left_shared_input.size(); i++) {
+    //std::vector<mo::SecureUnsignedInteger> output_cols {left_shared_input[i].Get(), right_shared_input[i].Get()};
+    //mo::SecureUnsignedInteger output_val {mo::ShareWrapper::Concatenate(output_cols)};
+    //output_val.Simdify(output_cols);
+    //shared_output.push_back(output_val);
+    std::vector<mo::ShareWrapper> left_unsimdified {left_shared_input[i].Get().Unsimdify()};
+    std::vector<mo::ShareWrapper> right_unsimdified {right_shared_input[i].Get().Unsimdify()};
+    std::vector<mo::ShareWrapper> output_cols;
+    output_cols.insert(output_cols.end(), left_unsimdified.begin(), left_unsimdified.end());
+    output_cols.insert(output_cols.end(), right_unsimdified.begin(), right_unsimdified.end());
+    shared_output.push_back(mo::ShareWrapper::Simdify(output_cols).Get());
+  }
+}
+
+void concatcol(std::vector<mo::SecureUnsignedInteger>& left_shared_input,
+               std::vector<mo::SecureUnsignedInteger>& right_shared_input,
+               std::vector<mo::SecureUnsignedInteger>& shared_output)
+{
+  for (std::size_t i=0; i < left_shared_input.size(); i++)
+    shared_output.push_back(left_shared_input[i]);
+  for (std::size_t i=0; i < right_shared_input.size(); i++)
+    shared_output.push_back(right_shared_input[i]);
+}
+
+void sortby(std::vector<mo::SecureUnsignedInteger>& right_shared_input,
+            std::vector<mo::SecureUnsignedInteger>& shared_output,
+            std::size_t key_col)
+{
+    
 }
 
 void CreateWorkflowCircuit(
@@ -66,14 +103,7 @@ void CreateWorkflowCircuit(
                 const std::vector<std::vector<std::uint32_t>>& input_rel,
                 std::vector<std::vector<mo::SecureUnsignedInteger>>& output)                
 {
-  std::vector<mo::SecureUnsignedInteger> shared_input1; 
-  std::vector<mo::SecureUnsignedInteger> shared_input2; 
-  std::vector<mo::SecureUnsignedInteger> shared_output;
-  close_input(party, input_rel, shared_input1, {0});  
-  close_input(party, input_rel, shared_input2, {1});
-  std::cout << "pretend executing ... " << std::endl;
-  shared_output = shared_input1;
-  open_output(party, shared_output, output, {1});
+  {{{WORKFLOW}}}
 }
 
 mo::RunTimeStatistics EvaluateProtocol(mo::PartyPointer& party,
@@ -85,18 +115,20 @@ mo::RunTimeStatistics EvaluateProtocol(mo::PartyPointer& party,
   CreateWorkflowCircuit(party, stored_with, input_rel, output);
 
   party->Run();
-  for (auto each_row: output) {
-    std::vector<std::uint32_t> row;
-    for (auto each_value: each_row) 
-      row.push_back(each_value.As<std::uint32_t>()); 
-    output_rel.push_back(row);   
+  for (auto each_col: output) {
+    std::vector<std::uint32_t> col;
+    for (auto each_value: each_col) 
+      col.push_back(each_value.As<std::uint32_t>()); 
+    output_rel.push_back(col);   
   }  
   party->Finish();
-  for (auto row: output_rel) {
-    for (auto cell: row)
-      std::cout << cell << " ";
+
+  for (std::size_t i=0; i < output_rel[0].size(); i++) {
+    for (std::size_t j=0; j < output_rel.size(); j++)
+      std::cout << output_rel[j][i] << " ";
     std::cout << std:: endl;
-  };
+  };  
+  
   const auto& statistics = party->GetBackend()->GetRunTimeStatistics();
   return statistics.front();
 }
