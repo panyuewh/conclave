@@ -22,6 +22,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <limits>
 #include "workflow.h"
 
 #include "motioncore/secure_type/secure_unsigned_integer.h"
@@ -37,9 +38,21 @@
 
 namespace mo = encrypto::motion;
 
+std::size_t next_pow_of_two(std::size_t n)
+{
+    std::size_t p = 1;
+    if (n && !(n & (n - 1)))
+        return n;
+
+    while (p < n)
+        p <<= 1;
+
+    return p;
+}
+
 void close_input(mo::PartyPointer& party,
                  const std::vector<std::vector<uint32_t>>& input_rel,
-                 std::vector<mo::SecureUnsignedInteger>& shared_input,
+                 std::vector<mo::ShareWrapper>& shared_input,
                  std::set<std::size_t> stored_with)
 {
   for (auto pid: stored_with)
@@ -48,41 +61,40 @@ void close_input(mo::PartyPointer& party,
 }
 
 void open_output(mo::PartyPointer& party,
-                 std::vector<mo::SecureUnsignedInteger>& shared_output,
-                 std::vector<std::vector<mo::SecureUnsignedInteger>>& output,                 
+                 std::vector<mo::ShareWrapper>& shared_output,
+                 std::vector<std::vector<mo::ShareWrapper>>& output,                 
                  std::set<std::size_t> stored_with)
 {
   for (std::size_t i=0; i < shared_output.size(); i++) {
-    std::vector<mo::SecureUnsignedInteger> output_col {shared_output[i].Unsimdify()};
+    std::vector<mo::ShareWrapper> output_col {shared_output[i].Unsimdify()};
     for (std::size_t j=0; j < output_col.size(); j++) 
       output_col[j] = output_col[j].Out();
     output.push_back(output_col);
   }  
 }
 
-void concat(std::vector<mo::SecureUnsignedInteger>& left_shared_input,
-            std::vector<mo::SecureUnsignedInteger>& right_shared_input,
-            std::vector<mo::SecureUnsignedInteger>& shared_output)
+void concat(std::vector<mo::ShareWrapper>& left_shared_input,
+            std::vector<mo::ShareWrapper>& right_shared_input,
+            std::vector<mo::ShareWrapper>& shared_output)
 {
   //assert(left_shared_input.size() == right_shared_input.isze());
 
   for (std::size_t i=0; i < left_shared_input.size(); i++) {
-    //std::vector<mo::SecureUnsignedInteger> output_cols {left_shared_input[i].Get(), right_shared_input[i].Get()};
-    //mo::SecureUnsignedInteger output_val {mo::ShareWrapper::Concatenate(output_cols)};
-    //output_val.Simdify(output_cols);
-    //shared_output.push_back(output_val);
-    std::vector<mo::ShareWrapper> left_unsimdified {left_shared_input[i].Get().Unsimdify()};
-    std::vector<mo::ShareWrapper> right_unsimdified {right_shared_input[i].Get().Unsimdify()};
+    //std::vector<mo::ShareWrapper> output_cols {left_shared_input[i], right_shared_input[i]};
+    //mo::ShareWrapper output_val {mo::ShareWrapper::Concatenate(output_cols)};
+    //shared_output.push_back(mo::ShareWrapper::Simdify(output_cols));
+    std::vector<mo::ShareWrapper> left_unsimdified {left_shared_input[i].Unsimdify()};
+    std::vector<mo::ShareWrapper> right_unsimdified {right_shared_input[i].Unsimdify()};
     std::vector<mo::ShareWrapper> output_cols;
     output_cols.insert(output_cols.end(), left_unsimdified.begin(), left_unsimdified.end());
     output_cols.insert(output_cols.end(), right_unsimdified.begin(), right_unsimdified.end());
-    shared_output.push_back(mo::ShareWrapper::Simdify(output_cols).Get());
+    shared_output.push_back(mo::ShareWrapper::Simdify(output_cols));
   }
 }
 
-void concatcol(std::vector<mo::SecureUnsignedInteger>& left_shared_input,
-               std::vector<mo::SecureUnsignedInteger>& right_shared_input,
-               std::vector<mo::SecureUnsignedInteger>& shared_output)
+void concatcol(std::vector<mo::ShareWrapper>& left_shared_input,
+               std::vector<mo::ShareWrapper>& right_shared_input,
+               std::vector<mo::ShareWrapper>& shared_output)
 {
   for (std::size_t i=0; i < left_shared_input.size(); i++)
     shared_output.push_back(left_shared_input[i]);
@@ -90,19 +102,130 @@ void concatcol(std::vector<mo::SecureUnsignedInteger>& left_shared_input,
     shared_output.push_back(right_shared_input[i]);
 }
 
-void sortby(std::vector<mo::SecureUnsignedInteger>& right_shared_input,
-            std::vector<mo::SecureUnsignedInteger>& shared_output,
+
+class OddEvenMergeSorter
+{
+private:
+  std::vector<std::vector<mo::ShareWrapper>>* rel;
+  std::vector<mo::SecureUnsignedInteger> comp; 
+  std::size_t npo2;
+  std::size_t len;
+
+public:
+  OddEvenMergeSorter(std::vector<std::vector<mo::ShareWrapper>>& r,
+                     std::vector<mo::SecureUnsignedInteger>& c)
+  {
+    npo2 = c.size();
+    len = r[0].size();
+    rel = &r;
+    comp = c;
+  } 
+
+  OddEvenMergeSorter(std::vector<std::vector<mo::ShareWrapper>>&& r,
+                     std::vector<mo::SecureUnsignedInteger>&& c)
+  {
+    npo2 = c.size();
+    len = r[0].size();
+    rel = &r;
+    comp = c;
+  } 
+
+  void sort()
+  {
+    oddEvenMergeSort(0, npo2); 
+  }
+
+  /** sorts a piece of length n of the array
+  * starting at position lo
+  */
+  void oddEvenMergeSort(std::size_t lo, std::size_t hi)
+  {
+    if (hi - lo > 1) {
+      std::size_t mid = lo + ((hi - lo) / 2) ;
+      oddEvenMergeSort(lo, mid);
+      oddEvenMergeSort(mid, hi);
+      oddEvenMerge(lo, hi, 1);
+    }
+  }
+
+  /** lo is the starting position and
+  * n is the length of the piece to be merged,
+  * r is the distance of the elements to be compared
+  */
+  void oddEvenMerge(std::size_t lo, std::size_t hi, std::size_t r)
+  {
+    std::size_t step = r * 2 ;
+    if (step < hi - lo) {
+      oddEvenMerge(lo, hi, step); // even subsequence
+      oddEvenMerge(lo+r, hi, step); // odd subsequence
+      for (std::size_t i = lo + r; (i<hi-r)&&(i+r<len); i += step) 
+        compareSwap(i, i + r);
+    }
+    else if (lo+r<len) 
+      compareSwap(lo, lo + r);
+  }
+
+  void compareSwap(std::size_t i, std::size_t j)
+  {
+    mo::ShareWrapper should_swap = comp[i] > comp[j];
+    mo::SecureUnsignedInteger temp_l = should_swap.Mux(comp[i].Get(), comp[j].Get());
+    mo::SecureUnsignedInteger temp_r = should_swap.Mux(comp[j].Get(), comp[i].Get());
+    comp[i] = temp_l;
+    comp[j] = temp_r;
+    for (auto& col: *rel) {
+      mo::ShareWrapper col_l = should_swap.Mux(col[i], col[j]);
+      mo::ShareWrapper col_r = should_swap.Mux(col[j], col[i]);
+      col[i] = col_l;
+      col[j] = col_r;
+    }
+  }
+}; // end class OddEvenMergeSorter
+
+
+mo::SecureUnsignedInteger SUINT_MAX;
+
+void sortby(std::vector<mo::ShareWrapper>& shared_input,
+            std::vector<mo::ShareWrapper>& shared_output,
             std::size_t key_col)
 {
-    
+  std::vector<std::vector<mo::ShareWrapper>> unsimdified_rel;
+  for (std::size_t i=0; i < shared_input.size(); i++) {
+    std::vector<mo::ShareWrapper> unsimdified_col = shared_input[i].Unsimdify();
+    for (std::size_t j=0; j < unsimdified_col.size(); j++)
+      unsimdified_col[j] = unsimdified_col[j].Convert<mo::MpcProtocol::kBooleanGmw>();
+    unsimdified_rel.push_back(unsimdified_col);
+  }
+  std::vector<mo::SecureUnsignedInteger> comp; 
+  for (auto& v: unsimdified_rel[key_col]) {
+    mo::SecureUnsignedInteger suint_v = v;
+    comp.push_back(suint_v);
+  } 
+  auto len = unsimdified_rel[key_col].size();
+  auto npo2 = next_pow_of_two(len);
+  for (std::size_t i=len; i<npo2; i++) {
+    mo::SecureUnsignedInteger suint_max(SUINT_MAX);
+    comp.push_back(suint_max);
+  }
+  
+  OddEvenMergeSorter s(unsimdified_rel, comp);
+  s.sort();
+  for (std::size_t i=0; i < unsimdified_rel.size(); i++) {
+    std::vector<mo::ShareWrapper> unsimdified_col = unsimdified_rel[i];
+    for (std::size_t j=0; j < unsimdified_col.size(); j++)
+      unsimdified_col[j] = unsimdified_col[j].Convert<mo::MpcProtocol::kArithmeticGmw>();
+    shared_output.push_back(mo::ShareWrapper::Simdify(unsimdified_col));
+  }
 }
 
 void CreateWorkflowCircuit(
                 mo::PartyPointer& party,
                 std::set<std::size_t> stored_with,
                 const std::vector<std::vector<std::uint32_t>>& input_rel,
-                std::vector<std::vector<mo::SecureUnsignedInteger>>& output)                
+                std::vector<std::vector<mo::ShareWrapper>>& output)                
 {
+  SUINT_MAX = party->SharedIn<mo::MpcProtocol::kArithmeticGmw, std::uint32_t>(std::numeric_limits<std::uint32_t>::max());
+  SUINT_MAX = SUINT_MAX.Get().Convert<mo::MpcProtocol::kBooleanGmw>();
+  //SUINT_MAX = party->SharedIn<mo::MpcProtocol::kBooleanGmw, std::uint32_t>(std::numeric_limits<std::uint32_t>::max());
   {{{WORKFLOW}}}
 }
 
@@ -111,7 +234,7 @@ mo::RunTimeStatistics EvaluateProtocol(mo::PartyPointer& party,
                                        std::vector<std::vector<uint32_t>>& output_rel)
 {
   std::set<std::size_t> stored_with {0, 1};
-  std::vector<std::vector<mo::SecureUnsignedInteger>> output;  
+  std::vector<std::vector<mo::ShareWrapper>> output;  
   CreateWorkflowCircuit(party, stored_with, input_rel, output);
 
   party->Run();
