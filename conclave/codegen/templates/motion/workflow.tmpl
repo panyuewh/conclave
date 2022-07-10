@@ -236,26 +236,94 @@ void sortby(std::vector<mo::ShareWrapper>& shared_input,
   }
 }
 
-// assuming rel[0] as key column, rel[1] as agg column 
+mo::SecureUnsignedInteger SUINT_ZERO;
+mo::SecureUnsignedInteger SUINT_ONE;
+enum enum_agg_func {kSUM, kCOUNT, kMEAN, kSTDDEV};
+
+// assuming rel[0] as key column, rel[1] as agg column, rel[2] as count column on demand
+// element of rel is alreadyin kBooleanGmw
 void shift_agg(std::vector<std::vector<mo::ShareWrapper>>& rel,
-               mo::SecureUnsignedInteger& base_num,
+               enum_agg_func k_agg_func,
+               mo::SecureUnsignedInteger& base_sum,
+               mo::SecureUnsignedInteger& base_count,
                std::vector<mo::ShareWrapper>& keep_rows=DEFAULT_KEEP_ROWS)
 {
   std::size_t len = rel[0].size();
-  keep_rows[len-1] = (rel[0][len-1] == rel[0][len-1]);
+  std::vector<mo::ShareWrapper> count_col(len, SUINT_ONE.Get());
+  switch (k_agg_func)  // prepare columns
+  {
+    case kMEAN:
+    case kSTDDEV:
+      rel.push_back(count_col);
+      break;
+    case kSUM:
+      break; 
+    case kCOUNT:
+      std::vector<mo::ShareWrapper> count_agg(len, SUINT_ONE.Get());
+      rel[1] = count_agg;
+      break;
+  } 
+  auto KEEP_TRUE = (rel[0][len-1] == rel[0][len-1]);
+  keep_rows[len-1] = KEEP_TRUE;
   for (std::size_t i=1; i<len; i++) {
     mo::ShareWrapper eq_flag = (rel[0][i-1] == rel[0][i]);
-    auto to_add = eq_flag.Mux(rel[1][i-1], base_num.Get());
-    rel[1][i] = rel[1][i].Convert<mo::MpcProtocol::kArithmeticGmw>();
-    rel[1][i] += to_add.Convert<mo::MpcProtocol::kArithmeticGmw>();
-    rel[1][i] = rel[1][i].Convert<mo::MpcProtocol::kBooleanGmw>();    
-    keep_rows[i-1] = eq_flag ^ keep_rows[len-1];
+    keep_rows[i-1] = eq_flag ^ KEEP_TRUE;  // eq_flag XOR True
+    mo::ShareWrapper accumulated;
+    mo::ShareWrapper counted;
+    switch (k_agg_func)
+    {
+      case kSUM:
+      case kMEAN:
+      case kCOUNT:
+        accumulated = eq_flag.Mux(rel[1][i-1], base_sum.Get()).Convert<mo::MpcProtocol::kArithmeticGmw>();
+        rel[1][i] = rel[1][i].Convert<mo::MpcProtocol::kArithmeticGmw>();
+        rel[1][i] += accumulated;
+        rel[1][i] = rel[1][i].Convert<mo::MpcProtocol::kBooleanGmw>();
+        break;
+      case kSTDDEV:
+        //TODO: implement STDDEV
+        break;
+    }
+    switch (k_agg_func)
+    {
+      case kMEAN:
+      case kSTDDEV:
+        counted = eq_flag.Mux(rel[2][i-1], base_count.Get());
+        rel[2][i] = rel[2][i].Convert<mo::MpcProtocol::kArithmeticGmw>();
+        rel[2][i] += counted.Convert<mo::MpcProtocol::kArithmeticGmw>();
+        rel[2][i] = rel[2][i].Convert<mo::MpcProtocol::kBooleanGmw>();
+        break;
+      case kSUM:
+      case kCOUNT:
+        //No need to calculate a separate count
+        break;
+    }
+  }
+  for (std::size_t i=0; i<len; i++) {
+    switch (k_agg_func)
+    {
+      case kMEAN:
+        for (std::size_t i=0; i < len; i++) {
+            mo::SecureUnsignedInteger dividend(rel[1][i].Convert<mo::MpcProtocol::kArithmeticGmw>());
+            mo::SecureUnsignedInteger divisor(rel[2][i].Convert<mo::MpcProtocol::kArithmeticGmw>());
+            auto quotient = dividend / divisor;
+            rel[1][i] = quotient.Get().Convert<mo::MpcProtocol::kBooleanGmw>();            
+        }
+        break;
+      case kSTDDEV:
+        //TODO: implement STDDEV
+        break;
+      case kSUM:
+      case kCOUNT:
+        //No need to average
+        break;
+    }
   }
 }
 
-mo::SecureUnsignedInteger SUINT_ZERO;
 void aggregate(std::vector<mo::ShareWrapper>& shared_input,
                std::vector<mo::ShareWrapper>& shared_output,
+               enum_agg_func k_agg_func,
                std::size_t key_col,
                std::size_t agg_col,
                std::vector<mo::ShareWrapper>& keep_rows=DEFAULT_KEEP_ROWS)
@@ -283,7 +351,7 @@ void aggregate(std::vector<mo::ShareWrapper>& shared_input,
   s.sort();
 
   keep_rows.resize(unsimdified_rel[0].size());
-  shift_agg(unsimdified_rel, SUINT_ZERO, keep_rows);
+  shift_agg(unsimdified_rel, k_agg_func, SUINT_ZERO, SUINT_ZERO, keep_rows);
 
   for (std::size_t i=0; i < unsimdified_rel.size(); i++) {
     std::vector<mo::ShareWrapper> unsimdified_col = unsimdified_rel[i];
@@ -304,6 +372,8 @@ void CreateWorkflowCircuit(
   SUINT_MAX = SUINT_MAX.Get().Convert<mo::MpcProtocol::kBooleanGmw>();
   SUINT_ZERO = party->SharedIn<mo::MpcProtocol::kArithmeticGmw, std::uint32_t>(0);
   SUINT_ZERO = SUINT_ZERO.Get().Convert<mo::MpcProtocol::kBooleanGmw>();
+  SUINT_ONE = party->SharedIn<mo::MpcProtocol::kArithmeticGmw, std::uint32_t>(1);
+  SUINT_ONE = SUINT_ONE.Get().Convert<mo::MpcProtocol::kBooleanGmw>();
   std::vector<mo::ShareWrapper> keep_rows;
   {{{WORKFLOW}}}
 }
@@ -321,7 +391,7 @@ mo::RunTimeStatistics EvaluateProtocol(mo::PartyPointer& party,
   std::vector<bool> keep(output_rows.size());
   for (std::size_t i=0; i<output_rows.size(); i++) 
     keep[i] = output_rows[i].As<bool>();
-  for (auto col: output) {
+  for (auto& col: output) {
     std::vector<std::uint32_t> output_col;
     for (std::size_t i=0; i<keep.size(); i++) 
       if (keep[i])

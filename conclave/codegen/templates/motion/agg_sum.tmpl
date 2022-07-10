@@ -6,4 +6,4 @@
   //{{{OUT_REL}}} = {{{IN_REL}}};
 
   std::vector<mo::ShareWrapper> {{{OUT_REL}}};
-  aggregate({{{IN_REL}}}, {{{OUT_REL}}}, {{{KEY_COL}}}, {{{AGG_COL}}}, keep_rows);
+  aggregate({{{IN_REL}}}, {{{OUT_REL}}}, kSUM, {{{KEY_COL}}}, {{{AGG_COL}}}, keep_rows);

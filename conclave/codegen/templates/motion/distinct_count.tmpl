@@ -2,3 +2,6 @@
     //intermediateMat {{{OUT_REL}}};
 
     //distinctCount(&{{{IN_REL}}}, &{{{OUT_REL}}}, {{{KEY_COL}}});
+
+  std::vector<mo::ShareWrapper> {{{OUT_REL}}};
+  aggregate({{{IN_REL}}}, {{{OUT_REL}}}, kCOUNT, {{{KEY_COL}}}, {{{AGG_COL}}}, keep_rows);
