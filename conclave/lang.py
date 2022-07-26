@@ -8,6 +8,16 @@ import conclave.utils as utils
 from conclave import rel
 from conclave.rel import Column
 
+#def declare_const(const_value):
+def declare_const(const_name: str, const_value):
+    """
+    Declare constants
+
+    :param const_name: Name of constant
+    :param const_value: Value of constant
+    """
+
+    return cc_dag.Constant(const_name, const_value)
 
 def create(rel_name: str, columns: list, stored_with: set):
     """
@@ -453,7 +463,7 @@ def union(left_input_node: cc_dag.OpNode, right_input_node: cc_dag.OpNode, outpu
 def _pub_intersect(input_node: cc_dag.OpNode,
                    output_name: str,
                    col_name: str,
-                   host: str = "ca-spark-node-0",
+                   host: str = "127.0.0.1",
                    port: int = 8042,
                    is_server: bool = True):
     """

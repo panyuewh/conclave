@@ -44,8 +44,9 @@ def generate_code(protocol: callable, cfg: CodeGenConfig, mpc_frameworks: list,
         mapping = part.heupart(dag, mpc_frameworks, local_frameworks)
 
         # for each sub-dag run code gen and add resulting job to job queue
+        print("\n")
         for job_num, (framework, sub_dag, stored_with) in enumerate(mapping):
-            print("job", job_num, ":", framework)
+            print("job {}: {}".format(job_num, framework))
             if framework == "sharemind":
                 name = "{}-sharemind-job-{}".format(cfg.name, job_num)
                 job = SharemindCodeGen(cfg, sub_dag, cfg.pid).generate(name, cfg.output_path)
@@ -112,11 +113,11 @@ def dispatch_jobs(job_queue: list, conclave_config: CodeGenConfig, time_dispatch
 
     # if more than one party is involved in the protocol, we need a networked peer
 
-    print("Salmon network_config: ", conclave_config.network_config)
+    #print("Salmon network_config: ", conclave_config.network_config, "\n")
     if len(conclave_config.all_pids) > 1:
         networked_peer = _setup_networked_peer(conclave_config.network_config)
 
-    print("time_dispatch=", time_dispatch, ", job_queue=", job_queue)
+    #print("time_dispatch=", time_dispatch, ", job_queue=", job_queue, "\n")
     if time_dispatch:
         # TODO use timeit
         import time

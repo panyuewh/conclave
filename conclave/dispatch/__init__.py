@@ -43,7 +43,7 @@ def dispatch_all(conclave_config, networked_peer: SalmonPeer, job_queue: list):
             except Exception as e:
                 print(e)
         else:
-            print("Skipping other party's job: ", job)
+            print("Skipping other party's job: ", job.name)
 
     _synchronize(networked_peer)
 

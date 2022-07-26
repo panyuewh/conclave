@@ -13,7 +13,7 @@ then
     fi
     cmake --build build -j 8
 else
-    echo "start mpcexec..."
+    echo -e "\nstart mpcexec..."
     build/mpcexec --parties {{{IP_AND_PORTS}}} --my-id {{{PID}}} --in-path {{{IN_PATH}}} {{{OUT_OPTION_AND_PATH}}}
-    echo "finish mpcexec"
+    echo -e "done mpcexec\n"
 fi 

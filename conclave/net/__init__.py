@@ -46,8 +46,6 @@ class SalmonProtocol(asyncio.Protocol):
         self.peer = peer   # a SalmonPeer object
         self.buffer = b""
         self.transport = None
-        print("SalmonProtocol peer=", self.peer.pid, self.peer)
-        print("SalmonProtocol peer.dispatcher=", self.peer.dispatcher)
 
     def connection_made(self, transport):
 
@@ -171,7 +169,7 @@ class SalmonPeer:
             if other_pid < self.pid:
                 other_host = self.parties[other_pid]["host"]
                 other_port = self.parties[other_pid]["port"]
-                print("Will connect to {} at {}:{}".format(
+                print("\nWill connect to SalmonPeer {} at {}:{}".format(
                     other_pid, other_host, other_port))
 
                 # create connection

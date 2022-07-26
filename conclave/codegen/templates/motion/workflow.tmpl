@@ -238,6 +238,9 @@ void sortby(std::vector<mo::ShareWrapper>& shared_input,
 
 mo::SecureUnsignedInteger SUINT_ZERO;
 mo::SecureUnsignedInteger SUINT_ONE;
+mo::ShareWrapper SB_TRUE;
+mo::ShareWrapper SB_FALSE;
+
 enum enum_agg_func {kSUM, kCOUNT, kMEAN, kSTDDEV};
 
 // assuming rel[0] as key column, rel[1] as agg column, rel[2] as count column on demand
@@ -361,6 +364,109 @@ void aggregate(std::vector<mo::ShareWrapper>& shared_input,
   }
 }
 
+void distinct_count(std::vector<mo::ShareWrapper>& shared_input,
+                    std::vector<mo::ShareWrapper>& shared_output,
+                    std::size_t key_col,
+                    std::vector<mo::ShareWrapper>& keep_rows=DEFAULT_KEEP_ROWS)
+{
+  std::vector<std::vector<mo::ShareWrapper>> unsimdified_rel;
+  std::vector<mo::ShareWrapper> unsimdified_col = shared_input[key_col].Unsimdify();
+  for (std::size_t j=0; j < unsimdified_col.size(); j++)
+    unsimdified_col[j] = unsimdified_col[j].Convert<mo::MpcProtocol::kBooleanGmw>();
+  unsimdified_rel.push_back(unsimdified_col);
+  std::vector<mo::SecureUnsignedInteger> comp; 
+  for (auto& v: unsimdified_rel[0]) {
+    mo::SecureUnsignedInteger suint_v = v;
+    comp.push_back(suint_v);
+  } 
+  auto len = unsimdified_rel[0].size();
+  auto npo2 = next_pow_of_two(len);
+  for (std::size_t i=len; i<npo2; i++) {
+    mo::SecureUnsignedInteger suint_max(SUINT_MAX);
+    comp.push_back(suint_max);
+  }
+
+  OddEvenMergeSorter s(unsimdified_rel, comp, keep_rows);
+  s.sort();
+
+  //TODO: add logic of counting distinct values
+  mo::SecureUnsignedInteger count = keep_rows[0].Mux(SUINT_ONE.Get(), SUINT_ZERO.Get());
+  for (std::size_t j=1; j < unsimdified_rel[0].size(); j++) {
+    auto curr = unsimdified_rel[0][j];
+    auto prev = unsimdified_rel[0][j-1];
+    auto is_eq = (curr == prev);
+    // if not keep, make is_eq = true
+    auto neglect = keep_rows[j].Mux(is_eq, SB_TRUE);
+    count += neglect.Mux(SUINT_ZERO.Get(), SUINT_ONE.Get());
+  }
+  std::vector<mo::ShareWrapper> unsimdified_ret {count.Get().Convert<mo::MpcProtocol::kArithmeticGmw>()};
+  shared_output.push_back(mo::ShareWrapper::Simdify(unsimdified_ret));
+  keep_rows.resize(1);
+  keep_rows[0] = SB_TRUE;
+}
+
+void filter_eq_by_constant(std::vector<mo::ShareWrapper>& shared_input,
+                           std::vector<mo::ShareWrapper>& shared_output,
+                           std::size_t key_col,
+                           mo::ShareWrapper constant,
+                           std::vector<mo::ShareWrapper>& keep_rows=DEFAULT_KEEP_ROWS)
+{
+  std::vector<mo::ShareWrapper> unsimdified_col = shared_input[key_col].Unsimdify();
+  for (std::size_t j=0; j < unsimdified_col.size(); j++)
+    unsimdified_col[j] = unsimdified_col[j].Convert<mo::MpcProtocol::kBooleanGmw>();
+  if (keep_rows.size() == 0) 
+    keep_rows.resize(unsimdified_col.size(), SB_TRUE);
+  for (std::size_t j=0; j<unsimdified_col.size(); j++) {
+    mo::ShareWrapper is_eq = (unsimdified_col[j] == constant);
+    keep_rows[j] &= is_eq; 
+  }
+  for (std::size_t i=0; i < shared_input.size(); i++) {
+    mo::ShareWrapper col(shared_input[i]);
+    shared_output.push_back(col);
+  } 
+}
+
+void filter_lt_by_column(std::vector<mo::ShareWrapper>& shared_input,
+                         std::vector<mo::ShareWrapper>& shared_output,
+                         std::size_t key_col,
+                         std::size_t comp_col,
+                         std::vector<mo::ShareWrapper>& keep_rows=DEFAULT_KEEP_ROWS)
+{
+  std::vector<mo::ShareWrapper> unsimdified_key_col = shared_input[key_col].Unsimdify();
+  std::vector<mo::ShareWrapper> unsimdified_comp_col = shared_input[comp_col].Unsimdify();
+  for (std::size_t j=0; j < unsimdified_key_col.size(); j++) {
+    unsimdified_key_col[j] = unsimdified_key_col[j].Convert<mo::MpcProtocol::kBooleanGmw>();
+    unsimdified_comp_col[j] = unsimdified_comp_col[j].Convert<mo::MpcProtocol::kBooleanGmw>();
+  }
+  if (keep_rows.size() == 0) 
+    keep_rows.resize(unsimdified_key_col.size(), SB_TRUE);
+  for (std::size_t j=0; j<unsimdified_key_col.size(); j++) {
+    mo::SecureUnsignedInteger comp = unsimdified_comp_col[j];
+    mo::SecureUnsignedInteger key = unsimdified_key_col[j];
+    mo::ShareWrapper is_lt = (comp > key);
+    keep_rows[j] &= is_lt; 
+  }
+  for (std::size_t i=0; i < shared_input.size(); i++) {
+    mo::ShareWrapper col(shared_input[i]);
+    shared_output.push_back(col);
+  } 
+}
+
+void multiply_matrices(std::vector<mo::ShareWrapper>& left_shared_input,
+                       std::vector<mo::ShareWrapper>& right_shared_input,
+                       std::vector<mo::ShareWrapper>& shared_output)
+{
+  if (left_shared_input.size() != right_shared_input.size()) {
+    std::cout << "Unequal number of rows for multiplyMatrices operator." << std::endl;
+    std::exit(1);
+  }
+  for (std::size_t i=0; i<left_shared_input.size(); i++)
+  {
+    mo::ShareWrapper col = left_shared_input[i] * right_shared_input[i];
+    shared_output.push_back(col);
+  }
+}
+
 void CreateWorkflowCircuit(
                 mo::PartyPointer& party,
                 std::set<std::size_t> stored_with,
@@ -374,7 +480,10 @@ void CreateWorkflowCircuit(
   SUINT_ZERO = SUINT_ZERO.Get().Convert<mo::MpcProtocol::kBooleanGmw>();
   SUINT_ONE = party->SharedIn<mo::MpcProtocol::kArithmeticGmw, std::uint32_t>(1);
   SUINT_ONE = SUINT_ONE.Get().Convert<mo::MpcProtocol::kBooleanGmw>();
+  SB_TRUE = (SUINT_ZERO == SUINT_ZERO);
+  SB_FALSE = (SB_TRUE ^ SB_TRUE);  
   std::vector<mo::ShareWrapper> keep_rows;
+
   {{{WORKFLOW}}}
 }
 

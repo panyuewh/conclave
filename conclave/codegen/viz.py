@@ -7,7 +7,7 @@ import os
 def _column_list(op: saldag.OpNode):
     """ Returns string that lists column names in output relation. """
 
-    return ", <BR/>".join([col.name for col in op.out_rel.columns])
+    return ", <BR/>".join(["_c_{}".format(col.name) for col in op.out_rel.columns])
 
 
 def _node_description(op: saldag.OpNode, kind: str, inner):
@@ -140,6 +140,89 @@ class VizCodeGen(CodeGen):
                                   )
             )
 
+    def _generate_union(self, union_op: saldag.Union):
+        """ Generate code for Union operations. """
+
+        return self._generate_node(
+                union_op,
+                _node_description(
+                    union_op, "UNION", "{} ∪ {} <br />on: _c_{} / _c_{}" .format(
+                        union_op.get_left_in_rel().name,
+                        union_op.get_right_in_rel().name,
+                        union_op.left_col.name,
+                        union_op.right_col.name)
+                                  )
+            )
+    
+    def _generate_filter(self, filter_op: saldag.Filter):
+        """ Generate code for Filer operations. """
+
+        return self._generate_node(
+                filter_op,
+                _node_description(
+                    filter_op, "FILTER", "{} <br />by {}: _c_{} = {}" .format(
+                        filter_op.get_in_rel().name,
+                        "scalar" if filter_op.is_scalar else "column",
+                        filter_op.filter_col.name,
+                        filter_op.scalar if filter_op.is_scalar else "_c_{}".format(filter_op.other_col))
+                                 )
+            )
+
+    def _generate_filter_by(self, filter_by_op: saldag.FilterBy):
+        """ Generate code for FilterBy operations. """
+
+        return self._generate_node(
+                filter_by_op,
+                _node_description(
+                    filter_by_op, "FILTER BY", "{} BY {} <br />on: _c_{}" .format(
+                        filter_by_op.get_left_in_rel().name,
+                        filter_by_op.get_right_in_rel().name,
+                        filter_by_op.filter_col.name)
+                                 )
+            )
+    
+    def _generate_pub_join(self, pub_join_op: saldag.PubJoin):
+        """ Generate code for PubJoin operations. """
+
+        if pub_join_op.right_parent is None:
+            return self._generate_node(
+                pub_join_op,
+                _node_description(
+                    pub_join_op, "PUB JOIN", "{} ⋈ {}:{} <br />on: _c_{}" .format(
+                        pub_join_op.get_left_in_rel().name,
+                        pub_join_op.host,
+                        pub_join_op.port,
+                        pub_join_op.key_col.name)
+                                  )
+            )
+        else:
+            return self._generate_node(
+                pub_join_op,
+                _node_description(
+                    pub_join_op, "PUB JOIN", "{} ⋈ {} {}:{} <br />on: _c_{}" .format(
+                        pub_join_op.get_left_in_rel().name,
+                        pub_join_op.get_right_in_rel().name,
+                        pub_join_op.host,
+                        pub_join_op.port,
+                        pub_join_op.key_col.name)
+                                  )
+            )
+
+
+    def _generate_pub_intersect(self, pub_intersect_op: saldag.PubIntersect):
+        """ Generate code for PubIntersect operations. """
+
+        return self._generate_node(
+                pub_intersect_op,
+                _node_description(
+                    pub_intersect_op, "PUB INTERSECT", "{} ∩ {}:{} <br />on: {}" .format(
+                        pub_intersect_op.get_in_rel().name,
+                        pub_intersect_op.host,
+                        pub_intersect_op.port,
+                        pub_intersect_op.col.name)
+                                  )
+            )
+
     def _generate_index(self, index_op: saldag.Index):
         """ Generate code for Index operations. """
 
@@ -175,6 +258,16 @@ class VizCodeGen(CodeGen):
                                   )
             )
 
+    def _generate_concat_cols(self, concat_cols_op: saldag.ConcatCols):
+        """ Generate code for ConcatCols operations. """
+        return self._generate_node(
+                concat_cols_op,
+                _node_description(
+                    concat_cols_op, "CONCAT COLS", "{}".format(
+                        [r.name for r in concat_cols_op.get_in_rels()])
+                )
+            )
+        
     def _generate_multiply(self, mul_op: saldag.Multiply):
         """ Generate code for Multiply operations. """
 
@@ -187,7 +280,7 @@ class VizCodeGen(CodeGen):
                 )
             )
 
-    def _generateOpen(self, open_op: saldag.Open):
+    def _generate_open(self, open_op: saldag.Open):
         """ Generate code for Open operations. """
 
         return self._generate_node(
@@ -211,6 +304,13 @@ class VizCodeGen(CodeGen):
                 _node_description(project_op, "PROJECT", "")
             )
 
+    def _generate_distinct_count(self, distinct_count_op: saldag.DistinctCount):
+        """ Generate code for Distinct Count operations. """
+        return self._generate_node(
+                distinct_count_op,
+                _node_description(distinct_count_op, "DISTINCT COUNT", "")
+            )
+
     def _generate_shuffle(self, shuffle_op: saldag.Shuffle):
         """ Generate code for Shuffle operations. """
 
@@ -232,4 +332,5 @@ class VizCodeGen(CodeGen):
 
         os.makedirs(self.config.code_path, exist_ok=True)
         outfile = open("{}/{}.gv".format(self.config.code_path, job_name), 'w')
+        print("write to {}/{}.gv".format(self.config.code_path, job_name))
         outfile.write(code)

@@ -4,4 +4,4 @@
     //distinctCount(&{{{IN_REL}}}, &{{{OUT_REL}}}, {{{KEY_COL}}});
 
   std::vector<mo::ShareWrapper> {{{OUT_REL}}};
-  aggregate({{{IN_REL}}}, {{{OUT_REL}}}, kCOUNT, {{{KEY_COL}}}, {{{AGG_COL}}}, keep_rows);
+  distinct_count({{{IN_REL}}}, {{{OUT_REL}}}, {{{KEY_COL}}}, keep_rows);

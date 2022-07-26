@@ -15,6 +15,11 @@ class PythonCodeGen(CodeGen):
     def __init__(self, config, dag: ccdag.Dag, space="    ",
                  template_directory="{}/templates/python".format(os.path.dirname(os.path.realpath(__file__)))):
         """ Initialize PythonCodeGen object. """
+        
+        if "python" not in config.system_configs:
+            raise Exception("Missing Python configuration in CodeGenConfig.\n")
+
+        self.py_config = config.system_configs['python']
         super(PythonCodeGen, self).__init__(config, dag)
         self.template_directory = template_directory
         # this belongs inside config

@@ -1,3 +1,5 @@
+import os
+
 import conclave.dag as ccdag
 from conclave.codegen import CodeGen
 
@@ -8,11 +10,10 @@ class ScotchCodeGen(CodeGen):
     def __init__(self, config, dag: ccdag.Dag):
         super(ScotchCodeGen, self).__init__(config, dag)
 
-    @staticmethod
-    def _generate_job(job_name, output_directory, op_code: str):
+    def _generate_job(self, job_name, output_directory, op_code: str):
         """ Top level job function. """
 
-        return op_code
+        return None, op_code
 
     @staticmethod
     def _generate_join_flags(join_flags_op: ccdag.JoinFlags):
@@ -409,3 +410,12 @@ class ScotchCodeGen(CodeGen):
             blackbox_op.backend,
             blackbox_op.out_rel.dbg_str()
         )
+
+    def _write_code(self, code: str, job_name: str):
+        """ Write code to file. """
+
+        os.makedirs(self.config.code_path, exist_ok=True)
+        outfile = open("{}/{}.scotch".format(self.config.code_path, job_name), 'w')
+        print("write to {}/{}.scotch".format(self.config.code_path, job_name))
+        outfile.write(code)
+

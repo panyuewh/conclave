@@ -15,9 +15,7 @@ class MotionCodeGen(CodeGen):
     """
 
     def __init__(self, config: CodeGenConfig, dag: Dag, pid: int,
-                 template_directory=
-                 "{}/templates/motion"
-                 .format(os.path.dirname(os.path.realpath(__file__)))):
+                 template_directory="{}/templates/motion".format(os.path.dirname(os.path.realpath(__file__)))):
 
         if "motion" not in config.system_configs:
             raise Exception("Missing MOTION configuration in CodeGenConfig.\n")
@@ -30,6 +28,7 @@ class MotionCodeGen(CodeGen):
         self.template_directory = template_directory
         self.pid = pid
         self.in_path = None
+        self.constants = {}
 
     ## TODO: this is duplcate with super, is it necessary?
     #def generate(self, job_name: str, output_directory: str):
@@ -43,6 +42,25 @@ class MotionCodeGen(CodeGen):
         #self._write_code(oc_code, job_name)
 
         #return job
+    
+    def _use_constant(self, value):
+        key = int(value)
+        if key not in self.constants:
+            self.constants[key] = "_VAR" + str(len(self.constants) + 1)
+
+        return self.constants[key]
+
+    def _declare_constant(self, const_name, const_value):
+        ## todo: add constants definition to workflow.cxx
+        template = open(
+             "{0}/declare_constant.tmpl".format(self.template_directory), 'r').read()
+
+        data = {
+            "CONST_NAME": const_name,
+            "CONST_VALUE": const_value 
+         }
+
+        return pystache.render(template, data)
 
     def _generate(self, job_name: [str, None], output_directory: [str, None]):
         """ Generate code for DAG passed"""
@@ -83,6 +101,11 @@ class MotionCodeGen(CodeGen):
                 op_code += self._generate_limit(node)
             else:
                 print("encountered unknown operator type", repr(node))
+        
+        if self.constants:
+            op_code = "\n" + op_code
+            for const_value, const_name in self.constants.items():
+                op_code = self._declare_constant(const_name, const_value) + op_code
 
         # expand top-level job template and return code
         return self._generate_job(job_name, self.config.code_path, op_code)
@@ -202,7 +225,8 @@ class MotionCodeGen(CodeGen):
                 "IN_REL": filter_op.get_in_rel().name,
                 "OUT_REL": filter_op.out_rel.name,
                 "KEY_COL": filter_op.filter_col.idx,
-                "CONSTANT": filter_op.scalar
+                #"CONSTANT": filter_op.scalar
+                "CONSTANT": self._use_constant(filter_op.scalar)
             }
 
             return pystache.render(template, data)

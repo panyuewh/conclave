@@ -2,3 +2,6 @@
     //intermediateMat {{{OUT_REL}}};
 
     //filterLtByColumn(&{{{IN_REL}}}, &{{{OUT_REL}}}, {{{KEY_COL}}}, {{{COMP_COL}}});
+
+  std::vector<mo::ShareWrapper> {{{OUT_REL}}};
+  filter_lt_by_column({{{IN_REL}}}, {{{OUT_REL}}}, {{{KEY_COL}}}, {{{COMP_COL}}}, keep_rows);

@@ -1,3 +1,7 @@
 
     //intermediateMat {{{OUT_REL}}};
     //distinctCountPreSorted(&{{{IN_REL}}}, &{{{OUT_REL}}}, {{{KEY_COL}}});
+
+
+  std::vector<mo::ShareWrapper> {{{OUT_REL}}};
+  distinct_count({{{IN_REL}}}, {{{OUT_REL}}}, {{{KEY_COL}}}, keep_rows);

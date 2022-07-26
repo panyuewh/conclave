@@ -1,6 +1,7 @@
 from copy import copy, deepcopy
 
 from conclave.codegen.scotch import ScotchCodeGen
+from conclave.codegen.viz import VizCodeGen
 from conclave.config import CodeGenConfig
 from conclave.dag import OpDag, Dag, Create, Open, Persist, OpNode
 
@@ -160,9 +161,11 @@ def heupart(dag: Dag, mpc_frameworks: list, local_frameworks: list):
     local_fmwk = local_frameworks[0]
     mpc_fmwk = mpc_frameworks[0]
 
-    print("##################")
-    print(ScotchCodeGen(CodeGenConfig(), nextdag)._generate(0, 0))
-    print("##################")
+    print("ScotchCodeGen...")
+    #print(ScotchCodeGen(CodeGenConfig(), nextdag)._generate(0, 0))
+    ScotchCodeGen(CodeGenConfig(), nextdag).generate(0, 0)
+    print("VizCodeGen...")
+    VizCodeGen(CodeGenConfig(), nextdag).generate(0, 0)
 
     while nextdag.roots:
         if iterations > iteration_limit:
@@ -178,8 +181,9 @@ def heupart(dag: Dag, mpc_frameworks: list, local_frameworks: list):
         # increment iteration count
         iterations += 1
 
-    for fmwk, subdag, stored_with in mapping:
-        print(fmwk, stored_with, ScotchCodeGen(CodeGenConfig(), subdag)._generate(0, 0))
+    #for fmwk, subdag, stored_with in mapping:
+        #print("ScotchCodeGen...", "stored with {}".format(stored_with))  
+        #ScotchCodeGen(CodeGenConfig(), subdag).generate(0, 0)
 
     merged = merge_neighbor_dags(mapping)
     return merged

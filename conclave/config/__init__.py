@@ -48,6 +48,15 @@ class SharemindCodeGenConfig:
         self.use_hdfs = use_hdfs
 
 
+class PythonConfig:
+    """ Python configuration."""
+
+    def __init__(self, net_config: dict):
+        self.inited = True
+        self.pid = net_config["pid"]
+        self.parties = net_config["parties"]
+
+
 class SparkConfig:
     """ Spark configuration."""
 
@@ -99,7 +108,7 @@ class CodeGenConfig:
         else:
             self.code_path = tempfile.mkdtemp(suffix="-code", prefix="salmon-")
             self.name = os.path.basename(self.code_path)
-        print("code_path =", self.code_path, "workflow_name =", workflow_name)
+        #print("code_path =", self.code_path, "workflow_name =", workflow_name)
         self.use_leaky_ops = False
         self.data_backend = "local"
         self.use_swift = False
@@ -175,6 +184,16 @@ class CodeGenConfig:
             self.__init__()
 
         self.system_configs["swift"] = cfg
+
+        return self
+
+    def with_python_config(self, cfg: PythonConfig):
+        """ Add SparkConfig object to this object. """
+
+        if not self.inited:
+            self.__init__()
+
+        self.system_configs["python"] = cfg
 
         return self
 

@@ -78,14 +78,14 @@ int main(int ac, char* av[])
     output_file.close();
   }
 
-  mo::AccumulatedRunTimeStatistics accumulated_statistics;
-  mo::AccumulatedCommunicationStatistics accumulated_communication_statistics;
-  accumulated_statistics.Add(statistics);
-  auto communication_statistics = party->GetCommunicationLayer().GetTransportStatistics();
-  accumulated_communication_statistics.Add(communication_statistics);
+  //mo::AccumulatedRunTimeStatistics accumulated_statistics;
+  //mo::AccumulatedCommunicationStatistics accumulated_communication_statistics;
+  //accumulated_statistics.Add(statistics);
+  //auto communication_statistics = party->GetCommunicationLayer().GetTransportStatistics();
+  //accumulated_communication_statistics.Add(communication_statistics);
 
-  std::cout << mo::PrintStatistics(fmt::format("For Conclave"), accumulated_statistics,
-                                   accumulated_communication_statistics);
+  //std::cout << mo::PrintStatistics(fmt::format("For Conclave"), accumulated_statistics,
+                                   //accumulated_communication_statistics);
   return EXIT_SUCCESS;
 }
 
@@ -216,7 +216,7 @@ mo::PartyPointer CreateParty(const po::variables_map& user_options)
     }
     parties_configuration.at(party_id) = std::make_pair(host, port);
     if (party_id != my_id) 
-      std::cout << "Will connect to " << party_id+1 << " at " << host << ":" << port << std::endl;
+      std::cout << "Will connect to Motion party " << party_id+1 << " at " << host << ":" << port << std::endl;
   }
   mo::communication::TcpSetupHelper helper(my_id, parties_configuration);
   auto communication_layer = std::make_unique<mo::communication::CommunicationLayer>

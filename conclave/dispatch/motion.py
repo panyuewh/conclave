@@ -13,7 +13,6 @@ class MotionDispatcher(Dispatcher):
 
     def __init__(self, peer: SalmonPeer, config: CodeGenConfig):
 
-        print("MotionDispatcher peer=", peer)
         self.peer = peer   
         self.config = config
         self.loop = peer.loop
@@ -30,7 +29,7 @@ class MotionDispatcher(Dispatcher):
         print("{}: setup MOTION job. ".format(job.name))
 
         try:
-            run(["/bin/bash", cmd, "rebuild"], cwd=job.code_dir)
+            run(["/bin/bash", cmd, "build"], cwd=job.code_dir)
         except Exception as e:
             print(e)
 
@@ -61,7 +60,7 @@ class MotionDispatcher(Dispatcher):
 
     def dispatch(self, job):
 
-        print("Dispatching. pid=%s, job=" % self.peer.pid, job)
+        print("\nDispatching motion job, pid={}. job: {}".format(self.peer.pid, job.name))
 
         # register self as current dispatcher with peer
         self.peer.register_dispatcher(self)
